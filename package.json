@@ -6,5 +6,5 @@
   "description": "Third-person water-blaster survival with a 20x-area meadow map, jumping, loot, interactive cover and private multiplayer.",
   "engines": { "node": ">=22" },
   "scripts": { "start": "node server/index.js", "test": "node --test tests/game.test.js tests/network.test.js tests/survival.test.js" },
-  "dependencies": { "three": "0.180.0", "ws": "8.18.3" }
+  "dependencies": { "three": "0.180.0", "ws": "8.21.0" }
 }
