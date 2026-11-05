@@ -21,7 +21,7 @@ test('requires all participants ready; prevents non-host start and fourth player
   room.configure('p2', { ready: true }); room.configure('p3', { ready: true }); room.start('p1');
   assert.equal(room.humans().length, 3); assert.equal(room.players.size, 8);
   assert.equal([...room.players.values()].filter(p => p.bot).length, 5);
-  assert.ok([...room.players.values()].every(p => MAP.obstacles.every(o => Math.hypot(p.x - o.x, p.z - o.z) > o.r + RULES.playerRadius)));
+  assert.ok([...room.players.values()].every(p => MAP.obstacles.filter(o=>o.solid!==false).every(o => Math.hypot(p.x - o.x, p.z - o.z) > o.r + RULES.playerRadius)));
   assert.throws(() => room.addHuman('p4', 'Four'), /đang diễn ra/);
 });
 test('one or two humans can start with fill to eight, including repeated solo rounds', () => {

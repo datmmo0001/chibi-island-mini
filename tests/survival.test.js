@@ -12,7 +12,7 @@ function roomForMeadow() {
 }
 test('new map has exactly twenty times the area, clear spawns and dense cover/loot',()=>{
   const map=MAPS.meadow;
-  assert.ok(Math.abs((map.radius/MAP.radius)**2-20)<1e-9);
+  assert.ok(Math.abs((map.radius/31)**2-20)<1e-9);
   assert.ok(map.obstacles.length>150);assert.ok(map.loot.length>60);
   for(const p of map.spawnPoints)assert.ok(map.obstacles.every(o=>Math.hypot(p.x-o.x,p.z-o.z)>o.r+RULES.playerRadius));
   assert.ok(map.obstacles.some(o=>o.kind==='gate'&&o.interactive));assert.ok(map.obstacles.some(o=>o.kind==='chest'&&o.interactive));
@@ -39,7 +39,7 @@ test('repeated jump requests cannot create flight; sprint increases horizontal s
 test('chest opens once, spawns real loot; gate cannot close on a player',()=>{
   const room=roomForMeadow(),p=room.players.get('me'),chest=room.map.obstacles.find(o=>o.kind==='chest');
   Object.assign(p,{x:chest.x,z:chest.z+chest.r+1.5,y:0});const count=room.loot.length;interact(room,p);
-  assert.equal(room.obstacles.get(chest.id).open,true);assert.equal(room.loot.length,count+3);interact(room,p);assert.equal(room.loot.length,count+3);
+  assert.equal(room.obstacles.get(chest.id).open,true);assert.equal(room.loot.length,count+5);interact(room,p);assert.equal(room.loot.length,count+5);
   const gate=room.map.obstacles.find(o=>o.kind==='gate');Object.assign(p,{x:gate.x,z:gate.z+gate.r+1.2,y:0});interact(room,p);assert.equal(room.obstacles.get(gate.id).open,true);
   Object.assign(p,{x:gate.x,z:gate.z});interact(room,p);assert.equal(room.obstacles.get(gate.id).open,true);
 });
@@ -61,8 +61,8 @@ test('3D sweep respects cover and elevation, without tunneling through a player'
   assert.equal(room.obstacles.get(crate.id).destroyed,true);assert.ok(room.loot.some(l=>l.id.startsWith('drop-')&&l.type==='ammo'));
 });
 test('survival storm moves continuously and finishes at a small safe area',()=>{
-  const map=MAPS.meadow,a=zoneAt(map,89.999),b=zoneAt(map,90);
+  const map=MAPS.meadow,a=zoneAt(map,129.999),b=zoneAt(map,130);
   assert.ok(Math.abs(a.radius-b.radius)<.01);assert.ok(Math.hypot(a.x-b.x,a.z-b.z)<.01);
-  assert.ok(zoneAt(map,0).radius>130);assert.equal(zoneAt(map,480).radius,5);assert.equal(zoneAt(map,480).damage,14);
+  assert.ok(zoneAt(map,0).radius>130);assert.equal(zoneAt(map,600).radius,5);assert.equal(zoneAt(map,600).damage,14);
   const room=roomForMeadow(),p=room.players.get('me');room.time=400;Object.assign(p,{x:-120,z:0,hp:100});room.tick(.1);assert.ok(p.hp<100);
 });

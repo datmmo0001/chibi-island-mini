@@ -2,6 +2,54 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { createGameServer } from '../server/index.js';
+import { addLoot } from '../server/survival.js';
+
+test('five independent browsers join and start a shared match on each map',async t=>{
+ const app=createGameServer();await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));t.after(()=>app.close());
+ const url=`ws://127.0.0.1:${app.server.address().port}/socket`;
+ for(const mapId of ['candy','meadow','frontier']){
+  const peers=await Promise.all(Array.from({length:6},()=>client(url)));
+  const host=peers[0];host.send({type:'create',mapId,capacity:5,name:'Host'});const joined=await host.wait(m=>m.type==='joined');
+  for(let i=1;i<5;i++){peers[i].send({type:'join',code:joined.code,name:`Friend ${i}`});await peers[i].wait(m=>m.type==='joined');}
+  peers[5].send({type:'join',code:joined.code,name:'Sixth'});assert.match((await peers[5].wait(m=>m.type==='error')).message,/5/);
+  for(const peer of peers.slice(0,5))peer.send({type:'configure',ready:true});
+  await host.wait(m=>m.type==='state'&&m.players.length===5&&m.players.every(p=>p.ready));host.send({type:'start'});
+  for(const peer of peers.slice(0,5)){const s=await peer.wait(m=>m.type==='state'&&m.phase==='playing');assert.equal(s.capacity,5);assert.equal(s.players.filter(p=>!p.bot).length,5);assert.equal(s.players.filter(p=>p.bot).length,3);}
+  for(const peer of peers)peer.socket.close();
+ }
+});
+
+test('home chat broadcasts text to another connection and limits repeated messages',async t=>{
+ const app=createGameServer();await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));t.after(()=>app.close());
+ const url=`ws://127.0.0.1:${app.server.address().port}/socket`,a=await client(url),b=await client(url);
+ a.send({type:'chat',name:'Tester',message:'<b>Hello</b>'});const message=await b.wait(m=>m.type==='chat');assert.equal(message.message,'<b>Hello</b>');assert.equal(message.name,'Tester');
+ a.send({type:'chat',message:'too soon'});a.send({type:'ping',at:123});await a.wait(m=>m.type==='pong'&&m.at===123);assert.equal(b.messages.some(m=>m.type==='chat'&&m.message==='too soon'),false);
+});
+
+test('three forest clients see the same skill activation, scope and elevated tower player',async t=>{
+  const app=createGameServer();await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));t.after(()=>app.close());
+  const url=`ws://127.0.0.1:${app.server.address().port}/socket`,a=await client(url),b=await client(url),c=await client(url);
+  a.send({type:'create',mapId:'frontier',name:'Forest'});const joined=await a.wait(m=>m.type==='joined');
+  for(const [p,name]of [[b,'Second'],[c,'Third']]){p.send({type:'join',code:joined.code,name});await p.wait(m=>m.type==='joined');}
+  for(const p of [a,b,c])p.send({type:'configure',ready:true});
+  await a.wait(m=>m.type==='state'&&m.players.length===3&&m.players.every(p=>p.ready));a.send({type:'start'});
+  const initial=await a.wait(m=>m.type==='state'&&m.phase==='playing');assert.equal(initial.mapId,'frontier');assert.equal(initial.players.filter(p=>p.bot).length,5);
+  a.send({type:'input',x:0,z:0,aim:Math.PI,interact:true});
+  await a.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).inventory.length===1);
+  const room=app.rooms.get(joined.code),me=room.players.get(joined.id);for(const p of room.players.values())if(p.bot)p.decision=10000;
+  addLoot(room,me.x,0,me.z,'skill','power');addLoot(room,me.x,0,me.z,'scope');
+  await a.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).skill==='power');
+  a.send({type:'input',x:0,z:0,aim:Math.PI,skill:true,aiming:true});
+  const states=await Promise.all([a,b,c].map(p=>p.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).effect==='power')));
+  for(const s of states){const p=s.players.find(p=>p.id===joined.id);assert.equal(p.scope,true);assert.equal(p.skill,null);assert.ok(p.effectRemaining>3);}
+  assert.equal(me.input.aiming,true);
+  const ladder=room.map.obstacles.find(o=>o.kind==='ladder');Object.assign(me,{x:ladder.x,z:ladder.z+.5,y:0});
+  a.send({type:'input',x:0,z:0,aim:0,interact:true});
+  await b.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).climbing);
+  const climbing=await c.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).y>1);
+  assert.ok(climbing.players.find(p=>p.id===joined.id).y<ladder.h);
+  const top=await b.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).y===ladder.h);assert.equal(top.players.find(p=>p.id===joined.id).climbing,false);
+});
 
 async function client(url) {
   const socket = new WebSocket(url), messages = [];
@@ -95,7 +143,7 @@ test('three meadow clients synchronize loot, weapon pickup and jump height over 
   for(const [p,name]of [[b,'Second'],[c,'Third']]){p.send({type:'join',code:joined.code,name});await p.wait(m=>m.type==='joined');}
   for(const p of [a,b,c])p.send({type:'configure',ready:true});
   await a.wait(m=>m.type==='state'&&m.players.length===3&&m.players.every(p=>p.ready));a.send({type:'start'});
-  const first=await a.wait(m=>m.type==='state'&&m.phase==='playing');assert.equal(first.mapId,'meadow');assert.equal(first.duration,480);assert.ok(first.loot.length>60);assert.equal(first.players.find(p=>p.id===joined.id).inventory.length,0);
+  const first=await a.wait(m=>m.type==='state'&&m.phase==='playing');assert.equal(first.mapId,'meadow');assert.equal(first.duration,600);assert.ok(first.loot.length>60);assert.equal(first.players.find(p=>p.id===joined.id).inventory.length,0);
   a.send({type:'input',x:0,z:0,aim:Math.PI,interact:true});
   const armed=await a.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).inventory.length>0);assert.equal(armed.players.find(p=>p.id===joined.id).inventory[0].id,'water');
   const witnessed=await b.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).inventory.length>0);assert.equal(witnessed.players.filter(p=>p.bot).length,5);
