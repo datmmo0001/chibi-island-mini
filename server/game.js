@@ -12,6 +12,7 @@ export class Room {
     this.map = getMap(mapId); this.duration = this.map.duration;
     this.players = new Map(); this.bullets = []; this.events = []; this.time = 0;
     this.round = 0; this.seq = 0; this.bulletId = 0; this.winner = null;
+    this.markers = []; this.markerSeq = 0;
     this.pickups = this.map.pickups.map((p, id) => ({ ...p, id, active: true, cooldown: 0 }));
     resetWorld(this);
     this.emptySince = null; this.createdAt = Date.now();
@@ -39,7 +40,7 @@ export class Room {
     if (this.phase !== 'lobby') throw new Error('Trận đã bắt đầu.');
     if (!this.humans().length || !this.humans().every(p => p.ready && p.connected))
       throw new Error('Cần ít nhất một người chơi và tất cả bấm Sẵn sàng.');
-    this.round++; this.time = 0; this.phase = 'playing'; this.bullets = []; this.events = []; this.winner = null;
+    this.round++; this.time = 0; this.phase = 'playing'; this.bullets = []; this.events = []; this.winner = null; this.markers = [];
     resetWorld(this);
     const fillCount = RULES.humans + RULES.bots - this.humans().length;
     for (let i = 0; i < fillCount; i++) this.players.set(`bot-${i}`, {
@@ -50,7 +51,7 @@ export class Room {
       const spawn = this.map.spawnPoints[i];
       Object.assign(p, { x: spawn.x, y: 0, z: spawn.z, vy: 0, previousY: 0, grounded: true, aim: Math.PI, pitch: 0,
         hp: 100, alive: true, kills: 0, cooldown: 0.6 + this.random(), input: emptyInput(), actions: emptyActions(), lastInput: 0, moving: false,
-        sprinting: false, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0,
+        sprinting: false, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, lastMarkerAt: -Infinity,
         inventory: this.map.survival ? [] : [{ id: 'water', mag: WEAPONS.water.capacity, reserve: 999 }] });
     });
     this.pickups.forEach(p => { p.active = true; p.cooldown = 0; });
@@ -79,18 +80,34 @@ export class Room {
     const p = this.players.get(id); if (!p) return;
     if (this.phase === 'playing' && p.alive) this.damage(p, 1000, null);
     this.players.delete(id);
+    this.markers = this.markers.filter(m => m.player !== id);
     if (this.hostId === id) this.hostId = this.humans().find(p => p.connected)?.id ?? null;
   }
   backToLobby(id) {
     if (this.hostId !== id) throw new Error('Chỉ chủ phòng có thể mở trận mới.');
     if (this.phase !== 'finished') return;
-    this.phase = 'lobby'; this.bullets = []; this.events = [];
+    this.phase = 'lobby'; this.bullets = []; this.events = []; this.markers = [];
     for (const [pid, p] of this.players) {
       if (p.bot || !p.connected) this.players.delete(pid);
       else Object.assign(p, { ready: false, alive: true, hp: 100, kills: 0, input: emptyInput() });
     }
   }
   zone() { return zoneAt(this.map, this.phase === 'lobby' ? 0 : this.time); }
+  placeMarker(id, aim) {
+    const p = this.players.get(id);
+    if (this.phase !== 'playing' || !p || p.bot || !p.alive || !p.connected) throw new Error('Chỉ đánh dấu khi bạn đang trong trận.');
+    if (!Number.isFinite(aim)) throw new Error('Hướng đánh dấu không hợp lệ.');
+    if (this.time - p.lastMarkerAt < RULES.markerCooldown) throw new Error('Chờ một chút trước khi đánh dấu tiếp nhé.');
+    const angle = aim % (Math.PI * 2);
+    let x = p.x + Math.sin(angle) * RULES.markerRange, z = p.z + Math.cos(angle) * RULES.markerRange;
+    const distance = Math.hypot(x, z), limit = this.map.radius - 2;
+    if (distance > limit) { x *= limit / distance; z *= limit / distance; }
+    p.lastMarkerAt = this.time;
+    const marker = { id: ++this.markerSeq, player: id, name: p.name, x, z, expiresAt: this.time + RULES.markerLife };
+    this.markers = [...this.markers.filter(m => m.player !== id && m.expiresAt > this.time), marker];
+    this.event('marker', { player: id, text: `${p.name} đã đánh dấu một vị trí`, at: this.time });
+    return marker;
+  }
   radius() { return this.zone().radius; }
   event(type, data) { this.events.push({ id: ++this.seq, type, ...data }); if (this.events.length > 30) this.events.shift(); }
   damage(p, amount, attacker) {
@@ -144,6 +161,7 @@ export class Room {
   tick(dt) {
     if (this.phase !== 'playing') return;
     this.time += dt; const zone = this.zone();
+    this.markers = this.markers.filter(m => m.expiresAt > this.time);
     for (const p of this.players.values()) {
       if (!p.bot && !p.connected) {
         p.disconnectedFor += dt;
@@ -181,7 +199,7 @@ export class Room {
   }
   snapshot() {
     return { type: 'state', code: this.code, phase: this.phase, mode: this.mode, hostId: this.hostId, round: this.round,
-      mapId: this.map.id, duration: this.duration, time: Math.round(this.time * 100) / 100, radius: this.radius(), zone: this.zone(), winner: this.winner,
+      mapId: this.map.id, duration: this.duration, time: Math.round(this.time * 100) / 100, radius: this.radius(), zone: this.zone(), winner: this.winner, markers: this.markers.map(m => ({ ...m })),
       players: [...this.players.values()].map(({ id, name, bot, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots }) =>
         ({ id, name, bot, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots })),
       bullets: this.bullets.map(({ id, owner, weapon, x, y, z, vx, vy, vz }) => ({ id, owner, weapon, x, y, z, vx, vy, vz })),

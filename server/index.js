@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Room, makeCode, makeId } from './game.js';
-import { RULES } from '../shared.js';
+import { RULES, GAME_VERSION } from '../shared.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
@@ -14,7 +14,7 @@ export function createGameServer({ maxRooms = 50 } = {}) {
     res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'same-origin');
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
     let pathname; try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); } catch { res.writeHead(400); return res.end(); }
-    if (pathname === '/health') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ ok: true, rooms: rooms.size })); }
+    if (pathname === '/health' || pathname === '/version') { res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-store'); return res.end(JSON.stringify(pathname === '/health' ? { ok: true, rooms: rooms.size, version: GAME_VERSION } : { version: GAME_VERSION })); }
     let file;
     if (pathname === '/shared.js') file = path.join(root, 'shared.js');
     else if (/^\/vendor\/three\.(core|module)\.js$/.test(pathname)) file = path.join(root, 'node_modules/three/build', path.basename(pathname));
@@ -41,7 +41,7 @@ export function createGameServer({ maxRooms = 50 } = {}) {
   wss.on('connection', ws => {
     let session = null, budget = 90, budgetAt = Date.now(); ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
-    send(ws, { type: 'hello' });
+    send(ws, { type: 'hello', version: GAME_VERSION });
     ws.on('message', raw => {
       const now = Date.now(); if (now - budgetAt >= 1000) { budget = 90; budgetAt = now; }
       if (--budget < 0) return ws.close(1008, 'Too many messages');
@@ -78,6 +78,7 @@ export function createGameServer({ maxRooms = 50 } = {}) {
         if (data.type === 'input') room.setInput(session.id, data);
         else if (data.type === 'configure') { room.configure(session.id, data); broadcast(room); }
         else if (data.type === 'start') { room.start(session.id); broadcast(room); }
+        else if (data.type === 'marker') { room.placeMarker(session.id, data.aim); broadcast(room); }
         else if (data.type === 'rematch') {
           room.backToLobby(session.id);
           if (room.mode === 'solo' && room.phase === 'lobby') { room.configure(session.id, { ready: true }); room.start(session.id); }
