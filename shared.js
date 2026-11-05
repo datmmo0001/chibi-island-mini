@@ -1,4 +1,5 @@
-export const RULES = Object.freeze({ humans: 3, bots: 5, tickRate: 30, snapshotRate: 20, duration: 180, arenaRadius: 31, playerRadius: 0.65, speed: 6.4, sprintMultiplier: 1.6, gravity: 25, jumpSpeed: 11.8, interactRange: 3.4, bulletSpeed: 58, damage: 16, fireInterval: 0.33, bulletLife: 1.3, reconnectSeconds: 25 });
+export const GAME_VERSION = '0.4.0';
+export const RULES = Object.freeze({ humans: 3, bots: 5, tickRate: 30, snapshotRate: 20, duration: 180, arenaRadius: 31, playerRadius: 0.65, speed: 6.4, sprintMultiplier: 1.6, gravity: 25, jumpSpeed: 11.8, interactRange: 3.4, bulletSpeed: 58, damage: 16, fireInterval: 0.33, bulletLife: 1.3, reconnectSeconds: 25, markerLife: 8, markerCooldown: 3, markerRange: 18 });
 export const WEAPONS = Object.freeze({
   water: { id: 'water', name: 'Súng nước', damage: 16, speed: 58, interval: .28, capacity: 18, reserve: 54, reload: 1.3, life: 1.3, spread: .018, pellets: 1, color: '#42eaff' },
   spray: { id: 'spray', name: 'Vòi phun liên thanh', damage: 10, speed: 54, interval: .12, capacity: 28, reserve: 84, reload: 1.65, life: 1.1, spread: .055, pellets: 1, color: '#ffe45b' },
