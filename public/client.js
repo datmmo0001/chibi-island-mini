@@ -1,4 +1,5 @@
 import { IslandScene } from './scene.js';
+import { createMenus } from './menus.js';
 import { RULES, OUTFITS, HATS, WEAPONS, getMap, visible } from '/shared.js';
 
 const $ = id => document.getElementById(id);
@@ -30,20 +31,22 @@ let ws, identity = null, state = null, retry = 0, retryTimer, toastTimer, pendin
 let lastZoneKey = '';
 const keys = new Set(), pointer = { x: 0, y: 0, down: false, look: false }, touch = { x: 0, z: 0, fire: false, sprint: false };
 const actions = { jump: false, interact: false, reload: false, swap: false, heal: false };
-let audio = null, soundEnabled = safeStore.get('chibi-sound', 'off') === 'on', lastShotSound = 0, latency = 0, resumed = false;
+let audio = null, menus, soundEnabled = safeStore.get('chibi-sound', 'off') === 'on', latency = 0, resumed = false;
+let lastHealth = null, damageTimer, firingTimer, feedSignature = '', compassAt = 0;
 $('player-name').value = safeStore.get('chibi-name');
 const invitedRoom = new URL(location.href).searchParams.get('room'); if (invitedRoom) $('room-code').value = invitedRoom.toUpperCase().slice(0, 6);
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4200); }
 function send(data) { if (ws?.readyState !== WebSocket.OPEN) { toast('Đang kết nối lại máy chủ. Chờ một chút nhé.'); return false; } ws.send(JSON.stringify(data)); return true; }
 function connection(online, text) { $('connection').classList.toggle('online', online); $('connection').lastChild.textContent = ' ' + text; }
 function setPending(value) { pending = value; $('create').disabled = value; $('solo').disabled = value; }
-function resetInput() { keys.clear(); pointer.down = false; pointer.look = false; touch.x = 0; touch.z = 0; touch.fire = false; touch.sprint = false; for (const key of Object.keys(actions)) actions[key] = false; $('touch-sprint').classList.remove('active'); $('joystick-knob').style.transform = ''; }
+function resetInput() { keys.clear(); pointer.down = false; pointer.look = false; lookPointer = null; joystickPointer = null; touch.x = 0; touch.z = 0; touch.fire = false; touch.sprint = false; for (const key of Object.keys(actions)) actions[key] = false; $('touch-sprint').classList.remove('active'); $('joystick-knob').style.transform = ''; world.setLocalInput({fire:false}); flushInput(); }
 function home() {
   identity = null; state = null; sessionStore.set(null); lastPhase = ''; lastEvent = 0; lastRound = 0; pending = false;
   $('home').hidden = false; $('lobby').hidden = true; $('hud').hidden = true; $('results').hidden = true;
   document.body.classList.remove('playing'); world.setMode('home'); world.updatePreview(outfit, hat); resetInput();
   activeMap = getMap(selectedMap); world.changeMap(selectedMap);
   setPending(false);
+  lastHealth = null; menus?.refreshNotice(); $('damage-vignette').classList.remove('visible');
 }
 function connect() {
   clearTimeout(retryTimer); connection(false, retry ? 'Đang kết nối lại…' : 'Đang kết nối…');
@@ -51,7 +54,8 @@ function connect() {
   ws.addEventListener('open', () => { retry = 0; connection(true, 'Máy chủ sẵn sàng'); setPending(false); const token = sessionStore.get(); if (token) send({ type: 'resume', token }); });
   ws.addEventListener('message', event => {
     let data; try { data = JSON.parse(event.data); } catch { return; }
-    if (data.type === 'joined') {
+    if (data.type === 'hello') menus?.announceVersion(data.version);
+    else if (data.type === 'joined') {
       identity = data.id; sessionStore.set(data.token); setPending(false); $('lobby-code').textContent = data.code;
       safeStore.set('chibi-name', $('player-name').value.trim()); resetInput();
       if (resumed) { toast('Đã nối lại phòng chơi.'); resumed = false; }
@@ -123,7 +127,8 @@ function renderLobby(data) {
 function renderState(data) {
   activeMap = getMap(data.mapId);
   state = data; const phaseChanged = data.phase !== lastPhase || data.round !== lastRound;
-  if (data.round !== lastRound) { lastEvent = 0; lastZoneKey = ''; }
+  if (data.round !== lastRound) { lastEvent = 0; lastZoneKey = ''; feedSignature = ''; }
+  if (phaseChanged) { lastHealth = null; $('damage-vignette').classList.remove('visible'); }
   $('home').hidden = true; $('lobby').hidden = data.phase !== 'lobby'; $('hud').hidden = data.phase === 'lobby'; $('results').hidden = data.phase !== 'finished';
   document.body.classList.toggle('playing', data.phase !== 'lobby');
   if (phaseChanged) { resetInput(); if (data.phase === 'playing') { toast(activeMap.survival ? 'E nhặt súng gần bạn · Space nhảy · Giữ chuột phải xoay camera' : 'Giữ chuột phải xoay camera · Chuột trái bắn · Space nhảy'); tone(620, .15, .05); } }
@@ -138,19 +143,26 @@ function renderState(data) {
     lastZoneKey = zoneKey;
     $('match-clock').textContent = timeText(seconds); $('map-name').textContent = activeMap.name;
     if (me) {
+      if (lastHealth !== null && me.hp < lastHealth && data.phase === 'playing') { $('damage-vignette').classList.add('visible'); clearTimeout(damageTimer); damageTimer = setTimeout(() => $('damage-vignette').classList.remove('visible'), 350); }
+      lastHealth = me.hp;
       $('my-name').textContent = me.name; $('kills').textContent = `${me.kills} lần loại`; $('health-number').textContent = `${me.hp} / 100`;
       $('health-fill').style.width = `${me.hp}%`; $('health-fill').style.background = me.hp < 30 ? '#ec927e' : '#83b78b';
       $('spectating').hidden = me.alive || data.phase === 'finished';
       const outside = Math.max(0, Math.hypot(me.x - zone.x, me.z - zone.z) - zone.radius);
       $('zone-warning').hidden = !me.alive || outside <= 0 || data.phase !== 'playing';
       $('zone-distance').textContent = outside > 0 ? `Vào bo: ${Math.ceil(outside)} m` : 'Trong vùng an toàn';
+      $('compass').hidden = outside > 0;
+      const marker = (data.markers || []).find(m => m.player === identity), cooldown = marker ? Math.max(0, Math.ceil(RULES.markerCooldown - (data.time - marker.expiresAt + RULES.markerLife))) : 0;
+      $('mark-position').disabled = !me.alive || cooldown > 0 || data.phase !== 'playing';
+      $('marker-hint').textContent = cooldown ? `Chờ ${cooldown}s` : 'T · Đánh dấu';
       renderInventory(me, data);
     }
-    const recent = data.events.filter(e => e.type === 'out').slice(-4);
-    $('feed').replaceChildren(...recent.map(e => { const line = document.createElement('div'); line.className = 'feed-line'; line.textContent = e.text; return line; }));
+    const recent = data.events.filter(e => e.type === 'out' || (e.type === 'marker' && data.time - e.at < RULES.markerLife)).slice(-4), signature = recent.map(e => e.id).join('/');
+    if (signature !== feedSignature) { feedSignature = signature; $('feed').replaceChildren(...recent.map(e => { const line = document.createElement('div'); line.className = 'feed-line' + (e.type === 'marker' ? ' marker-line' : ''); line.textContent = (e.type === 'marker' ? '⌖ ' : '') + e.text; return line; })); }
     for (const e of data.events) if (e.id > lastEvent) {
       if (e.type === 'out') tone(380, .12, .025);
       if (e.type === 'pickup' && e.player === identity) toast(e.text);
+      if (e.type === 'marker' && data.time - e.at < RULES.markerLife) { tone(820, .09, .04); if(e.player === identity) toast('Đã đánh dấu phía trước · Mọi người trong phòng đều thấy.'); }
       if (e.type === 'hit' && e.attacker === identity) { $('crosshair').classList.add('hit'); setTimeout(() => $('crosshair').classList.remove('hit'), 110); tone(1000, .04, .025); }
       lastEvent = Math.max(lastEvent, e.id);
     }
@@ -161,10 +173,8 @@ function renderState(data) {
       $('rematch').disabled = !host;
       $('rematch').textContent = host ? (data.mode === 'solo' ? 'Chơi lại ngay ↗' : 'Về phòng chờ · Chơi tiếp ↗') : 'Chờ chủ phòng mở trận tiếp';
     }
-    const newBullets = data.bullets.some(b => b.owner === identity && !world.projectiles.has(b.id));
-    if (newBullets && performance.now() - lastShotSound > 200) { tone(720 + Math.random() * 120, .07, .025); lastShotSound = performance.now(); }
   }
-  world.setState(data, identity); lastPhase = data.phase; lastRound = data.round;
+  world.setState(data, identity); lastPhase = data.phase; lastRound = data.round; menus?.refreshNotice();
 }
 function renderResults(data) {
   const winner = data.winner;
@@ -188,6 +198,7 @@ function drawMinimap(data) {
   ctx.strokeStyle = '#73def8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(zone.x * scale, zone.z * scale, data.radius * scale, 0, Math.PI * 2); ctx.stroke();
   ctx.save(); ctx.setLineDash([3,3]); ctx.strokeStyle = '#fffbd4'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(zone.nextX * scale, zone.nextZ * scale, zone.nextRadius * scale, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   for (const p of data.players) if (p.alive) { ctx.fillStyle = p.id === identity ? '#fffef0' : '#498b7b'; ctx.strokeStyle = p.id === identity ? '#386552' : '#fff4'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(p.x * scale, p.z * scale, p.id === identity ? 4 : 2.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  for (const m of data.markers || []) { ctx.strokeStyle = m.player === identity ? '#6ef8ff' : '#ffe282'; ctx.fillStyle = '#203d2b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(m.x * scale, m.z * scale, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   ctx.restore();
 }
 function renderInventory(me, data) {
@@ -196,6 +207,8 @@ function renderInventory(me, data) {
   $('ammo-mag').textContent = gun ? (activeMap.survival ? gun.mag : '∞') : '—';
   $('ammo-reserve').textContent = gun ? (activeMap.survival ? `/ ${gun.reserve}` : 'Nước không giới hạn') : 'E · Nhặt súng phát sáng';
   $('reload-status').textContent = me.reload > 0 ? `Đang nạp · ${me.reload.toFixed(1)} s` : gun && gun.mag === 0 ? 'R · Nạp nước' : 'Q · Đổi súng';
+  $('reload-progress').hidden = !(me.reload > 0 && definition); const reloadPercent = definition ? Math.round(Math.max(0, Math.min(1, 1 - me.reload / definition.reload)) * 100) : 0;
+  $('reload-progress').setAttribute('aria-valuenow', reloadPercent); $('reload-progress').firstElementChild.style.width = `${reloadPercent}%`;
   $('medkit-count').textContent = `Bình hồi phục: ${me.medkits || 0} · H`;
   for (let i = 0; i < 2; i++) { const button = $(`weapon-slot-${i}`); button.disabled = !inventory[i]; button.classList.toggle('active', !!inventory[i] && me.slot === i); button.textContent = `${i+1} · ${inventory[i] ? WEAPONS[inventory[i].id].name : 'Trống'}`; }
   const loot = (data.loot || []).filter(l => Math.abs(l.y - me.y) < 2 && Math.hypot(l.x - me.x, l.z - me.z) <= RULES.interactRange).sort((a,b) => Math.hypot(a.x-me.x,a.z-me.z)-Math.hypot(b.x-me.x,b.z-me.z))[0];
@@ -208,22 +221,26 @@ function renderInventory(me, data) {
 function initAudio() { if (!soundEnabled) return; try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume().catch(() => {}); } catch {} }
 function tone(frequency, duration, volume) {
   if (!soundEnabled || !audio || audio.state !== 'running') return;
-  try { const osc = audio.createOscillator(), gain = audio.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(frequency, audio.currentTime); osc.frequency.exponentialRampToValueAtTime(frequency * .6, audio.currentTime + duration); gain.gain.setValueAtTime(volume, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration); osc.connect(gain); gain.connect(audio.destination); osc.start(); osc.stop(audio.currentTime + duration); } catch {}
+  const level = volume * (menus?.volume() ?? .7); if (level <= 0) return;
+  try { const osc = audio.createOscillator(), gain = audio.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(frequency, audio.currentTime); osc.frequency.exponentialRampToValueAtTime(frequency * .6, audio.currentTime + duration); gain.gain.setValueAtTime(level, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration); osc.connect(gain); gain.connect(audio.destination); osc.start(); osc.stop(audio.currentTime + duration); } catch {}
 }
 function toggleSound() { soundEnabled = !soundEnabled; safeStore.set('chibi-sound', soundEnabled ? 'on' : 'off'); updateSound(); initAudio(); if (soundEnabled) tone(660, .1, .04); }
-function updateSound() { $('sound').classList.toggle('active', soundEnabled); $('sound').setAttribute('aria-label', soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'); $('sound').setAttribute('aria-pressed', String(soundEnabled)); }
+function updateSound() { $('sound').classList.toggle('active', soundEnabled); $('sound').setAttribute('aria-label', soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'); $('sound').setAttribute('aria-pressed', String(soundEnabled)); menus?.syncSound(); }
 $('sound').onclick = toggleSound;
 addEventListener('keydown', event => {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement) return;
+  if (menus?.isOpen()) return;
   if (state?.phase !== 'playing') return;
+  if (event.code === 'KeyT' && !event.repeat) { event.preventDefault(); markPosition(); return; }
   const actionKeys = { Space: 'jump', KeyE: 'interact', KeyR: 'reload', KeyQ: 'swap', KeyH: 'heal' };
   if (actionKeys[event.code]) { event.preventDefault(); if (!event.repeat) actions[actionKeys[event.code]] = true; }
   if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight','KeyF'].includes(event.code)) { event.preventDefault(); keys.add(event.code); }
   if (event.code === 'Digit1' && state.players.find(p=>p.id===identity)?.slot===1) actions.swap=true;
   if (event.code === 'Digit2' && state.players.find(p=>p.id===identity)?.slot===0) actions.swap=true;
   if (event.code === 'Escape') resetInput();
+  if (!event.repeat) flushInput();
 });
-addEventListener('keyup', event => keys.delete(event.code)); addEventListener('blur', resetInput);
+addEventListener('keyup', event => { if (keys.delete(event.code)) flushInput(); }); addEventListener('blur', resetInput);
 document.addEventListener('visibilitychange', () => { if (document.hidden) resetInput(); });
 let lookPointer = null;
 $('world').addEventListener('pointerdown', event => {
@@ -232,11 +249,12 @@ $('world').addEventListener('pointerdown', event => {
   if ((event.pointerType === 'mouse' && event.button === 2) || (event.pointerType !== 'mouse' && event.clientX > innerWidth * .36)) {
     event.preventDefault(); lookPointer=event.pointerId; pointer.look=true; pointer.x=event.clientX; pointer.y=event.clientY; $('world').setPointerCapture(event.pointerId);
   }
+  flushInput();
 });
 $('world').addEventListener('pointermove', event => {
   if (pointer.look && event.pointerId === lookPointer) { world.rotateCamera(event.clientX-pointer.x,event.clientY-pointer.y); pointer.x=event.clientX; pointer.y=event.clientY; }
 });
-function releaseLook(event) { if (event.pointerType==='mouse'&&event.button===0)pointer.down=false; if(event.pointerId===lookPointer){pointer.look=false;lookPointer=null;} }
+function releaseLook(event) { if (event.pointerType==='mouse'&&event.button===0)pointer.down=false; if(event.pointerId===lookPointer){pointer.look=false;lookPointer=null;} flushInput(); }
 for(const type of ['pointerup','pointercancel','lostpointercapture'])addEventListener(type,releaseLook);
 $('world').addEventListener('contextmenu',event=>{if(state?.phase==='playing')event.preventDefault();});
 $('world').addEventListener('wheel',event=>{if(state?.phase==='playing'){event.preventDefault();world.cameraDistance=Math.max(4.5,Math.min(11,(world.cameraDistance||7.5)+event.deltaY*.006));}},{passive:false});
@@ -245,18 +263,21 @@ function moveJoystick(event){
   if(event.pointerId!==joystickPointer)return;const rect=joystick.getBoundingClientRect(),dx=event.clientX-rect.left-rect.width/2,dy=event.clientY-rect.top-rect.height/2;
   const length=Math.hypot(dx,dy),limit=rect.width*.32,factor=length>limit?limit/length:1;touch.x=dx*factor/limit;touch.z=dy*factor/limit;$('joystick-knob').style.transform=`translate(${dx*factor}px,${dy*factor}px)`;
 }
-joystick.addEventListener('pointerdown',event=>{if(joystickPointer!==null)return;event.preventDefault();joystickPointer=event.pointerId;joystick.setPointerCapture(event.pointerId);moveJoystick(event);initAudio();});
+joystick.addEventListener('pointerdown',event=>{if(joystickPointer!==null)return;event.preventDefault();joystickPointer=event.pointerId;joystick.setPointerCapture(event.pointerId);moveJoystick(event);initAudio();flushInput();});
 joystick.addEventListener('pointermove',moveJoystick);
-function releaseJoystick(event){if(event.pointerId!==joystickPointer)return;joystickPointer=null;touch.x=0;touch.z=0;$('joystick-knob').style.transform='';}
+function releaseJoystick(event){if(event.pointerId!==joystickPointer)return;joystickPointer=null;touch.x=0;touch.z=0;$('joystick-knob').style.transform='';flushInput();}
 for(const type of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(type,releaseJoystick);
-$('touch-fire').addEventListener('pointerdown',event=>{event.preventDefault();$('touch-fire').setPointerCapture(event.pointerId);touch.fire=true;initAudio();});
-for(const type of ['pointerup','pointercancel','lostpointercapture'])$('touch-fire').addEventListener(type,()=>{touch.fire=false;});
-for(const [id,key]of [['touch-jump','jump'],['touch-interact','interact'],['touch-reload','reload'],['touch-swap','swap'],['touch-heal','heal']])$(id).addEventListener('pointerdown',event=>{event.preventDefault();actions[key]=true;initAudio();});
-$('touch-sprint').onclick=()=>{touch.sprint=!touch.sprint;$('touch-sprint').classList.toggle('active',touch.sprint);};
-for(let i=0;i<2;i++)$(`weapon-slot-${i}`).onclick=()=>{const me=state?.players.find(p=>p.id===identity);if(me&&me.inventory?.[i]&&me.slot!==i)actions.swap=true;};
-setInterval(()=>{
+$('touch-fire').addEventListener('pointerdown',event=>{event.preventDefault();$('touch-fire').setPointerCapture(event.pointerId);touch.fire=true;initAudio();flushInput();});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('touch-fire').addEventListener(type,()=>{touch.fire=false;flushInput();});
+for(const [id,key]of [['touch-jump','jump'],['touch-interact','interact'],['touch-reload','reload'],['touch-swap','swap'],['touch-heal','heal']])$(id).addEventListener('pointerdown',event=>{event.preventDefault();actions[key]=true;initAudio();flushInput();});
+$('touch-sprint').onclick=()=>{touch.sprint=!touch.sprint;$('touch-sprint').classList.toggle('active',touch.sprint);flushInput();};
+for(let i=0;i<2;i++)$(`weapon-slot-${i}`).onclick=()=>{const me=state?.players.find(p=>p.id===identity);if(me&&me.inventory?.[i]&&me.slot!==i){actions.swap=true;flushInput();}};
+function markPosition(){const me=state?.players.find(p=>p.id===identity);if(state?.phase==='playing'&&me?.alive&&!menus?.isOpen())send({type:'marker',aim:world.cameraYaw});}
+$('mark-position').onclick=markPosition;
+function flushInput(){
   if(!identity||state?.phase!=='playing'||ws?.readyState!==WebSocket.OPEN)return;
   const me=state.players.find(p=>p.id===identity);if(!me?.alive)return;
+  if (menus?.isOpen() || document.hidden) { world.setLocalInput({fire:false}); send({type:'input',x:0,z:0,aim:me.aim,fire:false}); return; }
   let x=Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft'))+touch.x;
   let z=Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp'))+touch.z;
   const d=Math.hypot(x,z);if(d>1){x/=d;z/=d;}
@@ -268,9 +289,13 @@ setInterval(()=>{
       .sort((a,b)=>Math.hypot(a.x-me.x,a.z-me.z)-Math.hypot(b.x-me.x,b.z-me.z))[0];
     if(target){const dx=target.x-me.x,dz=target.z-me.z;aim={aim:Math.atan2(dx,dz),pitch:Math.atan2(target.y-me.y,Math.hypot(dx,dz))};}
   }
+  world.setLocalInput({...aim,fire});
   if(send({type:'input',...movement,...aim,fire,sprint:touch.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight'),...actions}))for(const key of Object.keys(actions))actions[key]=false;
-},50);
+}
+setInterval(flushInput,50);
 setInterval(()=>{if(ws?.readyState===WebSocket.OPEN)send({type:'ping',at:performance.now()});},2500);
 let previous = performance.now();
-function frame(now) { const dt = Math.min((now - previous) / 1000, .05); previous = now; world.frame(dt); requestAnimationFrame(frame); }
+function frame(now) { const dt = Math.min((now - previous) / 1000, .05); previous = now; world.frame(dt); if(state?.phase==='playing'&&now-compassAt>100){compassAt=now;const degrees=((Math.PI-world.cameraYaw)*180/Math.PI%360+360)%360;const names=['BẮC','ĐÔNG BẮC','ĐÔNG','ĐÔNG NAM','NAM','TÂY NAM','TÂY','TÂY BẮC'];$('compass-name').textContent=names[Math.round(degrees/45)%8];$('compass-degrees').textContent=`${String(Math.round(degrees)%360).padStart(3,'0')}°`;} requestAnimationFrame(frame); }
+menus=createMenus({world,store:safeStore,resetInput,getSound:()=>soundEnabled,toggleSound,getPhase:()=>state?.phase});
+world.onLocalShot=()=>{clearTimeout(firingTimer);$('crosshair').classList.add('firing');firingTimer=setTimeout(()=>$('crosshair').classList.remove('firing'),90);tone(740+Math.random()*80,.07,.025);};
 renderOutfits(); world.updatePreview(outfit, hat); updateSound(); connect(); requestAnimationFrame(frame);

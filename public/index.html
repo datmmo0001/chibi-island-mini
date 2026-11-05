@@ -15,12 +15,12 @@
   <div class="vignette"></div>
   <header id="header">
     <a class="brand" href="/" aria-label="Chibi Island trang chủ"><span class="brand-mark">✿</span><span>chibi<span class="brand-light">island</span><small>ĐẢO NHỎ, NIỀM VUI LỚN</small></span></a>
-    <div class="header-right"><span class="connection" id="connection"><i></i> Đang kết nối…</span><span class="build">PLAYTEST 03</span><button class="icon-button" id="sound" aria-label="Bật âm thanh" title="Bật/tắt âm thanh">♫</button></div>
+    <div class="header-right"><span class="connection" id="connection"><i></i> Đang kết nối…</span><span class="build" id="build-label">0.4</span><button class="icon-button menu-open" data-dialog="guide-dialog" aria-label="Cách chơi" title="Cách chơi">?</button><button class="icon-button menu-open" data-dialog="settings-dialog" aria-label="Cài đặt" title="Cài đặt">⚙</button><button class="icon-button" id="sound" aria-label="Bật âm thanh" title="Bật/tắt âm thanh">♫</button></div>
   </header>
 
   <main id="home">
     <section class="welcome">
-      <div class="eyebrow"><span class="spark">✦</span> HẸN NHAU TRÊN ĐẢO KẸO</div>
+      <div class="eyebrow"><span class="spark">✦</span> HẸN NHAU TRÊN ĐẢO CHIBI</div>
       <h1>Nhỏ xíu.<br>Vui <span>hết cỡ!</span><svg class="underline" viewBox="0 0 260 15" aria-hidden="true"><path d="M4 10 Q120 -2 254 6"/></svg></h1>
       <p class="intro">Mặc đồ thật xinh, rủ hội bạn thân.<br>Một trận súng nước, cả đảo cười vui.</p>
       <div class="mode-chips"><span><b>Góc nhìn thứ ba</b></span><span><b>1–3</b> bạn cùng chơi</span><span id="match-duration-tag"><b>8′</b> sinh tồn</span></div>
@@ -38,6 +38,7 @@
         <form id="join-form" class="join-row"><label class="sr-only" for="room-code">Mã phòng</label><input id="room-code" placeholder="NHẬP MÃ PHÒNG" maxlength="6" autocomplete="off"><button class="secondary" type="submit">Vào phòng <span>→</span></button></form>
       </div>
       <p class="home-note"><span>✧</span> Chơi ngay hoặc rủ bạn · Không cần tài khoản</p>
+      <button class="guide-link" data-dialog="guide-dialog">Lần đầu lên đảo? Xem cách chơi ↗</button>
       <details class="game-info"><summary>Thông tin trò chơi</summary><p>Bạn có thể chơi riêng hoặc rủ bạn. Trận đấu có thể có đối thủ máy để bổ sung chỗ trống.</p></details>
     </section>
     <aside class="island-caption"><div class="floating-tag"><span>☀</span><span id="hero-map-name">ĐẢO CỎ XANH</span><i></i></div><h2 id="hero-map-heading">Đảo rộng hơn.<br>Phiêu lưu xa hơn.</h2><p id="preview-note">Nhảy qua bục · Nhặt súng · Chạy vào bo</p><span id="hero-map-subtitle" class="island-coordinate">DIỆN TÍCH 20× &nbsp; / &nbsp; GÓC NHÌN THỨ BA</span></aside>
@@ -58,12 +59,14 @@
   <section id="hud" hidden>
     <div class="match-top"><div class="match-badge"><span class="live-dot"></span><b id="alive-count">8</b><span>CÒN TRÊN ĐẢO</span></div><div class="timer"><small id="zone-phase">VÒNG BO</small><strong id="timer">00:35</strong></div><button id="leave-game" class="icon-button" aria-label="Rời trận" title="Rời trận">↪</button></div>
     <div class="map-meta"><b id="map-name">Đảo Cỏ Xanh</b><span id="match-clock">08:00</span><small id="zone-distance"></small></div>
+    <div class="hud-tools"><button class="icon-button" id="mark-position" aria-label="Đánh dấu phía trước" title="T · Đánh dấu phía trước">⌖</button><button class="icon-button" data-dialog="guide-dialog" aria-label="Cách chơi" title="Cách chơi">?</button><button class="icon-button" data-dialog="settings-dialog" aria-label="Cài đặt" title="Cài đặt">⚙</button><small id="marker-hint">T · Đánh dấu</small></div>
+    <div id="compass" aria-label="La bàn"><span id="compass-name">BẮC</span><b id="compass-degrees">000°</b></div>
     <div id="crosshair" aria-label="Tâm ngắm"><i></i><i></i><i></i><i></i></div>
     <div id="zone-warning" hidden>☂ Bạn đang ngoài vòng bo! Chạy vào vòng sáng nhé.</div>
     <div id="feed" aria-live="polite"></div>
     <div class="status-card"><div class="status-heading"><span id="my-name">Bạn</span><span id="kills">0 lần loại</span></div><div class="health-track"><div id="health-fill"></div></div><div class="health-caption"><span>♥ SỨC KHỎE</span><b id="health-number">100 / 100</b></div></div>
     <div id="spectating" hidden>Bạn đã hóa bóng bay 🎈<br><small>Đang theo dõi những người còn lại</small></div>
-    <div class="weapon-card"><b id="weapon-name">Chưa có súng</b><div class="ammo"><strong id="ammo-mag">—</strong><span id="ammo-reserve">Tìm vật phẩm phát sáng</span></div><div id="weapon-slots"><button id="weapon-slot-0" aria-label="Chọn súng thứ nhất">1 · Trống</button><button id="weapon-slot-1" aria-label="Chọn súng thứ hai">2 · Trống</button></div><small id="reload-status"></small><span id="medkit-count">Bình hồi phục: 0</span></div>
+    <div class="weapon-card"><b id="weapon-name">Chưa có súng</b><div class="ammo"><strong id="ammo-mag">—</strong><span id="ammo-reserve">Tìm vật phẩm phát sáng</span></div><div id="weapon-slots"><button id="weapon-slot-0" aria-label="Chọn súng thứ nhất">1 · Trống</button><button id="weapon-slot-1" aria-label="Chọn súng thứ hai">2 · Trống</button></div><small id="reload-status"></small><div id="reload-progress" role="progressbar" aria-label="Tiến độ nạp đạn" aria-valuemin="0" aria-valuemax="100" hidden><i></i></div><span id="medkit-count">Bình hồi phục: 0</span></div>
     <div id="interact-prompt" hidden><kbd>E</kbd><span id="interact-text">Nhặt vật phẩm</span></div>
     <div class="desktop-tip"><kbd>WASD</kbd> đi <kbd>Shift</kbd> chạy <kbd>Space</kbd> nhảy <kbd>E</kbd> nhặt/mở <kbd>R</kbd> nạp <kbd>Q</kbd> đổi súng <kbd>H</kbd> hồi phục · Giữ chuột phải xoay camera</div>
     <canvas id="minimap" width="170" height="170" aria-label="Bản đồ nhỏ"></canvas>
@@ -71,6 +74,23 @@
   </section>
 
   <section id="results" class="results-backdrop" hidden><div class="results-card"><div class="result-flower">✿</div><div class="eyebrow">MỘT TRẬN THẬT VUI!</div><h1 id="result-title">Đảo có quán quân!</h1><p id="winner-name"></p><div id="scoreboard"></div><button class="primary" id="rematch">Về phòng chờ ↗</button><button class="text-button" id="leave-results">Rời phòng</button></div></section>
+  <div id="damage-vignette" aria-hidden="true"></div>
+  <dialog id="guide-dialog" class="game-dialog" aria-labelledby="guide-title">
+    <button class="dialog-close" data-close-dialog aria-label="Đóng cách chơi">×</button><div class="eyebrow">✦ HÀNH TRANG LÊN ĐẢO</div><h2 id="guide-title">Ba bước để giữ đảo.</h2>
+    <div class="guide-steps"><article><b>01 · NHẶT ĐỒ</b><p>Trên Đảo Cỏ Xanh, đến gần súng phát sáng và bấm <kbd>E</kbd> hoặc nút <strong>NHẶT / MỞ</strong>. Hòm tiếp tế có thêm đồ, thùng gỗ có thể bắn vỡ.</p></article><article><b>02 · DI CHUYỂN & BẮN</b><p><kbd>WASD</kbd> đi · <kbd>Shift</kbd> chạy · <kbd>Space</kbd> nhảy. Giữ chuột phải xoay camera, chuột trái bắn. Điện thoại: cần trái để đi, vuốt phải để nhìn, giữ <strong>BẮN</strong> để hỗ trợ ngắm.</p></article><article><b>03 · THEO VÒNG BO</b><p>Ở trong vòng xanh trên bản đồ nhỏ. Vòng nét đứt là vùng tiếp theo. Người cuối cùng còn sống thắng.</p></article></div>
+    <div class="guide-shortcuts"><span><kbd>R</kbd> Nạp nước</span><span><kbd>Q</kbd> Đổi súng</span><span><kbd>H</kbd> Hồi phục</span><span><kbd>T</kbd> Đánh dấu phía trước</span><span><kbd>F</kbd> Bắn có hỗ trợ ngắm</span></div>
+    <p class="dialog-note">Rủ bạn: tạo phòng, gửi lời mời, tất cả sẵn sàng rồi chủ phòng bắt đầu. Đảo Kẹo có sẵn súng khi vào trận.</p><p class="live-match-note" hidden>Trận vẫn tiếp diễn khi mở hướng dẫn hoặc cài đặt.</p><button class="primary" data-close-dialog>Đã hiểu · Quay lại game</button>
+  </dialog>
+  <dialog id="settings-dialog" class="game-dialog" aria-labelledby="settings-title">
+    <button class="dialog-close" data-close-dialog aria-label="Đóng cài đặt">×</button><div class="eyebrow">✦ CHƠI THEO CÁCH CỦA BẠN</div><h2 id="settings-title">Một chút vừa ý.</h2>
+    <label class="setting-field" for="quality-setting">Đồ họa<select id="quality-setting"><option value="auto">Tự chọn theo thiết bị</option><option value="low">Nhẹ máy · Tắt bóng đổ</option><option value="standard">Cân bằng</option><option value="high">Sắc nét</option></select></label>
+    <label class="setting-field" for="sensitivity-setting">Độ nhạy xoay camera <output id="sensitivity-value">1.0×</output><input id="sensitivity-setting" type="range" min="0.5" max="2" step="0.1" value="1"></label>
+    <label class="setting-check"><input id="invert-setting" type="checkbox">Đảo chiều nhìn lên / xuống</label>
+    <label class="setting-check"><input id="sound-setting" type="checkbox">Bật âm thanh</label>
+    <label class="setting-field" for="volume-setting">Âm lượng <output id="volume-value">70%</output><input id="volume-setting" type="range" min="0" max="100" step="5" value="70"></label>
+    <p class="dialog-note">Tùy chỉnh được lưu trên thiết bị này. Chọn “Nhẹ máy” nếu hình ảnh bị giật hoặc máy nóng.</p><p class="live-match-note" hidden>Trận vẫn tiếp diễn khi mở hướng dẫn hoặc cài đặt.</p><button class="primary" data-close-dialog>Xong · Quay lại</button>
+  </dialog>
+  <div id="version-notice" role="status" hidden><span>Có phiên bản mới</span><button id="refresh-version">Tải bản mới</button></div>
   <div id="toast" role="status" hidden></div>
   <div id="fatal" hidden><div><h2>Chưa mở được đảo 3D</h2><p id="fatal-message"></p><button class="primary" onclick="location.reload()">Thử lại</button></div></div>
   <script type="module" src="/client.js"></script>
