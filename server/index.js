@@ -39,7 +39,7 @@ export function createGameServer({ maxRooms = 50 } = {}) {
     wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
   });
   wss.on('connection', ws => {
-    let session = null, budget = 90, budgetAt = Date.now(); ws.isAlive = true;
+    let chatAt=0;let session = null, budget = 90, budgetAt = Date.now(); ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
     send(ws, { type: 'hello', version: GAME_VERSION });
     ws.on('message', raw => {
@@ -48,6 +48,7 @@ export function createGameServer({ maxRooms = 50 } = {}) {
       let data; try { data = JSON.parse(raw.toString()); } catch { return send(ws, { type: 'error', message: 'Dữ liệu không hợp lệ.' }); }
       if (!data || typeof data !== 'object' || Array.isArray(data)) return;
       try {
+        if(data.type==='chat'){if(now-chatAt<1500)return;chatAt=now;const message=String(data.message||'').trim().slice(0,160);if(message)for(const peer of wss.clients)send(peer,{type:'chat',name:String(data.name||'Khách').slice(0,18),message});return;}
         if (data.type === 'ping') return send(ws, { type: 'pong', at: data.at });
         if (data.type === 'resume' && !session) {
           const found = typeof data.token === 'string' ? sessions.get(data.token) : null;
@@ -62,7 +63,7 @@ export function createGameServer({ maxRooms = 50 } = {}) {
           if (data.type === 'create' || data.type === 'solo') {
             if (rooms.size >= maxRooms) throw new Error('Máy chủ đang đầy, vui lòng thử lại sau.');
             let code; do { code = makeCode(); } while (rooms.has(code));
-            room = new Room(code, null, { mode: data.type === 'solo' ? 'solo' : 'party', mapId: data.mapId || 'meadow' }); rooms.set(code, room);
+            room = new Room(code, null, { mode: data.type === 'solo' ? 'solo' : 'party', mapId: data.mapId || 'meadow', capacity:data.capacity, respawn:data.respawn }); rooms.set(code, room);
           } else {
             room = rooms.get(String(data.code || '').toUpperCase().trim());
             if (!room) throw new Error('Không tìm thấy phòng. Kiểm tra lại mã nhé.');

@@ -1,13 +1,15 @@
 import { randomBytes } from 'node:crypto';
-import { RULES, OUTFITS, HATS, WEAPONS, getMap, clamp, stepActor, visible, zoneAt, obstacleSolid } from '../shared.js';
+import { RULES, OUTFITS, HATS, WEAPONS, getMap, clamp, stepActor, visible, zoneAt, obstacleSolid, obstacleContains, concealedAt } from '../shared.js';
 import { activeWeapon, resetWorld, equipLoot, interact, reloadWeapon, updateWeapon, healPlayer, shoot, advanceBullets } from './survival.js';
+
+import { useSkill, updateSkill } from './skills.js';
 
 const botNames = ['Bông Gòn', 'Kẹo Dẻo', 'Mít Ướt', 'Bắp Rang', 'Mây Nhỏ', 'Nấm Lùn', 'Su Kem'];
 const emptyInput = () => ({ x: 0, z: 0, aim: 0, pitch: 0, fire: false, sprint: false });
-const emptyActions = () => ({ jump: false, interact: false, reload: false, swap: false, heal: false });
+const emptyActions = () => ({ jump: false, interact: false, reload: false, swap: false, heal: false, skill: false });
 export class Room {
-  constructor(code, hostId, { random = Math.random, mode = 'party', mapId = 'candy' } = {}) {
-    this.code = code; this.hostId = hostId; this.random = random; this.phase = 'lobby';
+  constructor(code, hostId, { random = Math.random, mode = 'party', mapId = 'candy', capacity=3, respawn=false } = {}) {
+    this.capacity=capacity===5?5:mapId==='frontier'&&capacity===20?20:3;this.respawn=mapId==='candy'&&respawn===true;this.code = code; this.hostId = hostId; this.random = random; this.phase = 'lobby';
     this.mode = mode === 'solo' ? 'solo' : 'party';
     this.map = getMap(mapId); this.duration = this.map.duration;
     this.players = new Map(); this.bullets = []; this.events = []; this.time = 0;
@@ -21,7 +23,7 @@ export class Room {
   addHuman(id, name, outfit = 'bear', hat = 'ears') {
     if (this.phase !== 'lobby') throw new Error('Trận đang diễn ra. Hãy chờ trận tiếp theo.');
     if (this.mode === 'solo' && this.humans().length) throw new Error('Đây là trận chơi riêng. Hãy tạo phòng cùng bạn để mời thêm người.');
-    if (this.humans().length >= RULES.humans) throw new Error('Phòng đã đủ 3 người chơi.');
+    if (this.humans().length >= this.capacity) throw new Error(`Phòng đã đủ ${this.capacity} người chơi.`);
     const p = { id, name: String(name || 'Bạn nhỏ').trim().slice(0, 18) || 'Bạn nhỏ', bot: false,
       outfit: OUTFITS.some(o => o.id === outfit) ? outfit : 'bear', hat: HATS.includes(hat) ? hat : 'ears',
       x: 0, y: 0, z: 0, aim: 0, hp: 100, alive: true, kills: 0, ready: false, inventory: [], slot: 0,
@@ -42,16 +44,17 @@ export class Room {
       throw new Error('Cần ít nhất một người chơi và tất cả bấm Sẵn sàng.');
     this.round++; this.time = 0; this.phase = 'playing'; this.bullets = []; this.events = []; this.winner = null; this.markers = [];
     resetWorld(this);
-    const fillCount = RULES.humans + RULES.bots - this.humans().length;
+    const fillCount = (this.capacity===20?20:8) - this.humans().length;
     for (let i = 0; i < fillCount; i++) this.players.set(`bot-${i}`, {
-      id: `bot-${i}`, name: botNames[i], bot: true, outfit: OUTFITS[i % 3].id, hat: HATS[i % 3],
+      id: `bot-${i}`, name: botNames[i%botNames.length]+(i>=botNames.length?` ${Math.floor(i/botNames.length)+1}`:""), bot: true, outfit: OUTFITS[i % 3].id, hat: HATS[i % 3],
       connected: true, ready: true, input: emptyInput(), decision: 0, drift: this.random() * Math.PI * 2
     });
     [...this.players.values()].forEach((p, i) => {
-      const spawn = this.map.spawnPoints[i];
+      const spawn = this.capacity===20?{x:Math.sin(i*Math.PI/10)*170,z:Math.cos(i*Math.PI/10)*170}:this.map.spawnPoints[i%this.map.spawnPoints.length];
+      if(this.capacity===20){for(let n=0;n<80&&this.map.obstacles.some(o=>obstacleSolid(o,this.obstacles)&&obstacleContains(o,spawn.x,spawn.z,1));n++){spawn.x*=.985;spawn.z*=.985;}}
       Object.assign(p, { x: spawn.x, y: 0, z: spawn.z, vy: 0, previousY: 0, grounded: true, aim: Math.PI, pitch: 0,
         hp: 100, alive: true, kills: 0, cooldown: 0.6 + this.random(), input: emptyInput(), actions: emptyActions(), lastInput: 0, moving: false,
-        sprinting: false, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, lastMarkerAt: -Infinity,
+        sprinting: false, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, scope: false, skill: null, effect: null, effectRemaining: 0, climb: null, concealed: false, revealedUntil: 0, lastMarkerAt: -Infinity,
         inventory: this.map.survival ? [] : [{ id: 'water', mag: WEAPONS.water.capacity, reserve: 999 }] });
     });
     this.pickups.forEach(p => { p.active = true; p.cooldown = 0; });
@@ -61,7 +64,7 @@ export class Room {
     const p = this.players.get(id); if (!p || p.bot || !p.connected || this.phase !== 'playing') return;
     // Never accept positions, health, targets, kills, or timestamps from a client.
     if (![data.x, data.z, data.aim].every(Number.isFinite)) return;
-    p.input = { x: clamp(data.x, -1, 1), z: clamp(data.z, -1, 1), aim: data.aim % (Math.PI * 2), pitch: Number.isFinite(data.pitch) ? clamp(data.pitch, -1.1, 1.1) : 0, fire: data.fire === true, sprint: data.sprint === true };
+    p.input = { x: clamp(data.x, -1, 1), z: clamp(data.z, -1, 1), aim: data.aim % (Math.PI * 2), pitch: Number.isFinite(data.pitch) ? clamp(data.pitch, -1.1, 1.1) : 0, fire: data.fire === true, sprint: data.sprint === true, aiming: data.aiming === true && p.scope === true && !!activeWeapon(p) };
     for (const key of Object.keys(p.actions)) if (data[key] === true) p.actions[key] = true;
     p.lastInput = this.time;
   }
@@ -92,7 +95,7 @@ export class Room {
       else Object.assign(p, { ready: false, alive: true, hp: 100, kills: 0, input: emptyInput() });
     }
   }
-  zone() { return zoneAt(this.map, this.phase === 'lobby' ? 0 : this.time); }
+  zone() { if(this.respawn)return {x:0,z:0,radius:this.map.radius,nextX:0,nextZ:0,nextRadius:this.map.radius,phase:1,shrinking:false,seconds:0,damage:0};return zoneAt(this.map, this.phase === 'lobby' ? 0 : this.time); }
   placeMarker(id, aim) {
     const p = this.players.get(id);
     if (this.phase !== 'playing' || !p || p.bot || !p.alive || !p.connected) throw new Error('Chỉ đánh dấu khi bạn đang trong trận.');
@@ -114,7 +117,7 @@ export class Room {
     if (!p.alive) return;
     p.hp = Math.max(0, p.hp - amount);
     if (p.hp <= 0) {
-      p.alive = false; p.moving = false;
+      p.alive = false; p.moving = false;p.respawnAt=this.time+3;
       const by = this.players.get(attacker); if (by) by.kills++;
       this.event('out', { player: p.id, attacker, text: `${p.name} đã bay lên trời${by ? ` · ${by.name}` : ''}` });
     }
@@ -123,11 +126,11 @@ export class Room {
     p.decision -= dt; if (p.decision > 0) return;
     p.decision = .18 + this.random() * .13;
     const zone = this.zone(), gun = activeWeapon(p);
-    const targets = [...this.players.values()].filter(q => q.id !== p.id && q.alive);
+    const targets = [...this.players.values()].filter(q => q.id !== p.id && q.alive && (!q.concealed || Math.hypot(q.x-p.x,q.z-p.z)<5));
     targets.sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
     const lineOfSight = q => visible(p.x, p.z, q.x, q.z, this.map, this.obstacles, Math.min(p.y + 1.3, q.y + 1.3));
     const target = targets.find(q => Math.hypot(q.x - p.x, q.z - p.z) < 45 && lineOfSight(q)) || targets[0];
-    const nearestLoot = this.loot.filter(l => l.active && ((!gun && l.type === 'weapon') || (gun && gun.reserve < 12 && l.type === 'ammo') || (p.hp < 60 && l.type === 'heal')))
+    const nearestLoot = this.loot.filter(l => l.active && ((!gun && l.type === 'weapon') || (gun && gun.reserve < 12 && l.type === 'ammo') || (p.hp < 60 && l.type === 'heal') || (!p.skill && l.type === 'skill')))
       .sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
     let gx = 0, gz = 0;
     if (Math.hypot(p.x - zone.x, p.z - zone.z) > zone.radius - 6) { gx = zone.x - p.x; gz = zone.z - p.z; }
@@ -141,14 +144,14 @@ export class Room {
       gz = dz / d * approach + dx / d * Math.sin(p.drift) * .65;
     }
     const length = Math.hypot(gx, gz) || 1; gx /= length; gz /= length;
-    const blocker = this.map.obstacles.find(o => obstacleSolid(o, this.obstacles) && p.y < o.h - .04 && Math.hypot(p.x + gx * 2 - o.x, p.z + gz * 2 - o.z) < o.r + RULES.playerRadius);
+    const blocker = this.map.obstacles.find(o => obstacleSolid(o, this.obstacles) && p.y < o.h - .04 && obstacleContains(o,p.x+gx*2,p.z+gz*2,RULES.playerRadius));
     if (blocker?.walkable && blocker.h < p.y + 2.5 && p.grounded) p.actions.jump = true;
     else if (blocker) {
       if (blocker.kind === 'gate') p.actions.interact = true;
       const base = Math.atan2(gx, gz);
       for (const turn of [.65, -.65, 1.2, -1.2, 1.8, -1.8, Math.PI]) {
         const x = Math.sin(base + turn), z = Math.cos(base + turn);
-        if (!this.map.obstacles.some(o => obstacleSolid(o, this.obstacles) && p.y < o.h - .04 && Math.hypot(p.x + x * 2.1 - o.x, p.z + z * 2.1 - o.z) < o.r + RULES.playerRadius)) { gx = x; gz = z; break; }
+        if (!this.map.obstacles.some(o => obstacleSolid(o, this.obstacles) && p.y < o.h - .04 && obstacleContains(o,p.x+x*2.1,p.z+z*2.1,RULES.playerRadius))) { gx = x; gz = z; break; }
       }
     }
     const d = target ? Math.hypot(target.x - p.x, target.z - p.z) : 100;
@@ -156,6 +159,7 @@ export class Room {
       pitch: target ? Math.atan2(target.y - p.y, d) : 0, sprint: !gun || d > 28 || Math.hypot(p.x - zone.x, p.z - zone.z) > zone.radius - 10,
       fire: !!gun && !!target && d < (WEAPONS[gun.id].speed * WEAPONS[gun.id].life * .85) && lineOfSight(target) && this.random() > .18 };
     if (p.hp < 65) p.actions.heal = true;
+    if(p.skill&&p.effectRemaining<=0&&(p.hp<70||d<30))p.actions.skill=true;
     if (gun && gun.mag < 2) p.actions.reload = true;
   }
   tick(dt) {
@@ -167,11 +171,17 @@ export class Room {
         p.disconnectedFor += dt;
         if (p.disconnectedFor >= RULES.reconnectSeconds && p.alive) this.damage(p, 1000, null);
       }
+      if(!p.alive&&this.respawn&&p.connected&&this.time+1e-6>=p.respawnAt){
+        let spawn=null;for(let n=0;n<64;n++){const a=(this.random()+n*.618034)*Math.PI*2,r=Math.sqrt(this.random())*(this.map.radius-4),x=Math.sin(a)*r,z=Math.cos(a)*r;if(!this.map.obstacles.some(o=>obstacleContains(o,x,z,1))){spawn={x,z};break;}}
+        spawn ||= this.map.spawnPoints[Math.floor(this.random()*this.map.spawnPoints.length)];
+        Object.assign(p,{...spawn,y:0,previousY:0,vy:0,hp:100,alive:true,grounded:true,moving:false,sprinting:false,climb:null,effect:null,effectRemaining:0,concealed:false,reload:0,cooldown:1,input:emptyInput(),actions:emptyActions()});
+      }
       if (!p.alive) continue;
       if (p.bot) this.botInput(p, dt);
       else if (!p.connected || this.time - p.lastInput > .5) { p.input = emptyInput(); p.actions = emptyActions(); }
       const input = p.input, actions = p.actions;
       p.aim = input.aim; p.pitch = input.pitch || 0; p.moving = Math.hypot(input.x, input.z) > .1; p.sprinting = p.moving && input.sprint;
+      if(actions.skill)useSkill(this,p);
       stepActor(p, { ...input, jump: actions.jump }, dt, this.map, this.obstacles);
       if (Math.hypot(p.x - zone.x, p.z - zone.z) > zone.radius) this.damage(p, dt * zone.damage, null);
       if (actions.interact) interact(this, p);
@@ -179,7 +189,9 @@ export class Room {
       if (actions.reload) reloadWeapon(p);
       if (actions.heal) healPlayer(p);
       updateWeapon(p, dt);
-      if (input.fire) shoot(this, p);
+      if (input.fire && !p.climb) shoot(this, p);
+      updateSkill(p,dt);
+      p.concealed=concealedAt(p,this.map)&&this.time>=p.revealedUntil&&!p.effect;
       if (this.map.survival) for (const l of this.loot) if (l.active && l.type !== 'weapon' && Math.abs(p.y - l.y) < 1.2 && Math.hypot(p.x - l.x, p.z - l.z) < 1.15) equipLoot(this, p, l);
       p.actions = emptyActions();
     }
@@ -191,18 +203,18 @@ export class Room {
       if (p) { p.hp = Math.min(100, p.hp + 35); pickup.active = false; pickup.cooldown = 22; }
     }
     const alive = [...this.players.values()].filter(p => p.alive);
-    if (alive.length <= 1 || this.time >= this.duration) {
-      const winner = alive.sort((a, b) => b.hp - a.hp || b.kills - a.kills || a.id.localeCompare(b.id))[0];
+    if ((!this.respawn&&alive.length <= 1) || this.time >= this.duration) {
+      const winner = (this.respawn?[...this.players.values()]:alive).sort((a, b) => (this.respawn?b.kills-a.kills:0)||b.hp - a.hp || b.kills - a.kills || a.id.localeCompare(b.id))[0];
       this.phase = 'finished'; this.winner = winner ? { id: winner.id, name: winner.name, bot: winner.bot } : null;
       this.bullets = []; this.event('finish', { text: winner ? `${winner.name} chiến thắng!` : 'Hòa cả làng!' });
     }
   }
   snapshot() {
-    return { type: 'state', code: this.code, phase: this.phase, mode: this.mode, hostId: this.hostId, round: this.round,
+    return { type: 'state', code: this.code, phase: this.phase, mode: this.mode, capacity:this.capacity, respawn:this.respawn, hostId: this.hostId, round: this.round,
       mapId: this.map.id, duration: this.duration, time: Math.round(this.time * 100) / 100, radius: this.radius(), zone: this.zone(), winner: this.winner, markers: this.markers.map(m => ({ ...m })),
-      players: [...this.players.values()].map(({ id, name, bot, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots }) =>
-        ({ id, name, bot, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots })),
-      bullets: this.bullets.map(({ id, owner, weapon, x, y, z, vx, vy, vz }) => ({ id, owner, weapon, x, y, z, vx, vy, vz })),
+      players: [...this.players.values()].map(({ id, name, bot, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining, concealed, climb }) =>
+        ({ id, name, bot, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
+      bullets: this.bullets.map(({ id, owner, weapon, x, y, z, vx, vy, vz, speed }) => ({ id, owner, weapon, x, y, z, vx, vy, vz, speed })),
       loot: this.loot.filter(l => l.active), obstacles: [...this.obstacles.values()].filter(s => s.open || s.destroyed || s.hp < s.maxHp),
       pickups: this.pickups.map(({ id, x, z, active }) => ({ id, x, z, active })), events: this.events };
   }
