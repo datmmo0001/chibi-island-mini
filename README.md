@@ -1,29 +1,16 @@
-# Chibi Island Mini
+# Chibi Island Mini — 0.6.3
 
-**Chơi ngay: https://chibi-island-mini.onrender.com**
+Chơi tại **https://chibi-island-mini.onrender.com**. Bản 0.6.3 đã được người dùng duyệt phát hành; kiểm tra phiên bản đang chạy tại `/health` hoặc `/version`.
 
-Game sinh tồn góc nhìn thứ ba với phòng riêng tối đa ba người, đấu súng nước, nhảy lên vật cản, nhặt đồ và chạy bo. Có Đảo Cỏ Xanh rộng gấp 20 lần diện tích map Đảo Kẹo. Máy chủ bổ sung đối thủ để đủ tám nhân vật mỗi trận.
+Game súng nước góc nhìn thứ ba. Mọi map có phòng tối đa 3 hoặc 5 người thật; Rừng Gió thêm tùy chọn 20 người. Chỗ trống được bổ sung đến 8 nhân vật (phòng 3/5) hoặc 20 nhân vật (phòng 20). Chơi ngay mở trận riêng.
 
-## Bản 0.4 — Đồng hành trên đảo
+- Đảo Kẹo rộng 5 lần bản gốc, có bụi núp và tường chặn đạn. Tùy chọn hồi sinh sau 3 giây, xếp hạng theo kill khi hết giờ.
+- Cỏ Xanh rộng 20 lần và Rừng Gió rộng 40 lần diện tích Đảo Kẹo gốc, sinh tồn tối đa 10 phút. Có loot, vòng bo, công trình, cầu thang và chòi canh.
+- Kỹ năng và ống ngắm nhặt từ hòm; chat online ở màn chọn map. Bố cục HUD điện thoại chỉnh được vị trí, cỡ và độ rõ.
+- PC: WASD đi, Shift chạy, Space nhảy, E nhặt/mở/leo, R nạp, Q đổi súng, H hồi máu, C kỹ năng, V ngắm. Bấm cảnh để xin khóa chuột; Esc mở chuột, Tab cài đặt. Khung nhúng có thể từ chối khóa chuột; khi đó giữ chuột phải để xoay.
 
-- Đánh dấu phía trước bằng T hoặc nút ⌖; cả phòng thấy trên map 3D và bản đồ nhỏ. Dấu tồn tại tám giây, có thời gian chờ để hạn chế gửi dồn.
-- La bàn, tiến độ nạp đạn và phản hồi khi bị bắn.
-- Nút Cách chơi và Cài đặt ngay trong game; chọn mức đồ họa, độ nhạy camera, đảo chiều nhìn, âm lượng. Tùy chỉnh được lưu trên thiết bị.
-- Camera theo sát hơn, gửi thao tác ngay lúc nhấn/thả và phản hồi súng tức thì. Vị trí, đạn, đồ nhặt, trúng đạn và kết quả vẫn do máy chủ quyết định.
-- Thông báo có bản mới ở màn hình chờ/kết quả; không tự tải lại giữa trận.
+Chơi cùng bạn: chọn map và số người → Tạo phòng cùng bạn → gửi mã/lời mời → mọi người vào và sẵn sàng → chủ phòng bắt đầu.
 
-## Chơi cùng bạn
+Máy chủ Render chạy độc lập với máy tính cá nhân. Gói Free có thể cần chờ lúc thức dậy sau khi vắng người. Phòng trong RAM mất khi máy chủ khởi động lại. Auto-Deploy giữ Off; chỉ Manual Deploy sau khi đã tải đủ mã.
 
-Cả ba mở link → một người Tạo phòng cùng bạn → gửi lời mời/mã phòng → tất cả Mình sẵn sàng → chủ phòng Lên đảo thôi. Chơi ngay tạo trận riêng.
-
-Máy chủ Render hoạt động độc lập với máy tính cá nhân. Gói Free có thể ngủ khi vắng người; lần mở tiếp theo có thể cần chờ khoảng một phút. Link giữ nguyên qua cập nhật. Phòng cũ mất khi máy chủ khởi động lại.
-
-## Phát triển
-
-Node.js 22 trở lên. `npm install`, `npm test`, `npm start`.
-
-Trình duyệt dùng Three.js; máy chủ Node/WebSocket điều khiển trận đấu. Không cần API ChatGPT hoặc cơ sở dữ liệu. Đồ họa được tạo bằng mã, không lấy tài nguyên từ Play Together.
-
-Kiểm tra bản online: `node tests/public-smoke.mjs https://chibi-island-mini.onrender.com`.
-
-Đọc HUONG_DAN.md để biết điều khiển đầy đủ, RENDER_HOSTING.md để quản lý bản đang chạy, PHAT_TRIEN_TIEP.md để xem các bước tiếp theo trước khi làm bản Android.
+Node.js 22+: `npm install`, `npm test`, `npm start`. Kiểm tra link công khai: `node tests/public-smoke.mjs https://chibi-island-mini.onrender.com`. Đã có 50 kiểm thử logic/mạng/HUD; cần tiếp tục thử hiệu năng, đa chạm trên điện thoại thật. Chưa phát hành Android/Play Store.

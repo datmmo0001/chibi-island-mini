@@ -1,5 +1,18 @@
 # Game trên Render — link cố định
 
+> **Bản phát hành 0.6.3 đã được người dùng duyệt để cập nhật lên link cố định. Phiên bản đang chạy xem tại /health.**
+
+
+## Bản thử 0.6.0 — Đảo Rừng Gió
+
+- Map mới riêng, diện tích đúng 40 lần Đảo Kẹo (bán kính 31√40 ≈ 196 m); giữ cả Đảo Cỏ Xanh 20× và Đảo Kẹo. Sinh tồn tối đa 10 phút, trận kết thúc sớm nếu còn một người.
+- Lùm cây che vừa nhân vật, chín nhà có cầu thang và bục nhảy lên mái, chín chòi có thang leo bằng E / NHẶT. Có sàn, lan can và va chạm theo độ cao.
+- Hòm thêm một kỹ năng ngẫu nhiên dùng một lần và ống ngắm 3×. Giữ một kỹ năng, dùng hết mới nhặt kỹ năng tiếp; không chồng hiệu lực.
+- Lướt tốc độ ×3 trong 5s; bật cao và bay 4s; hồi 16 máu/s trong 4s; sát thương súng ×2 trong 4s; tên lửa 65 sát thương/người, xuyên người/vật cản, mỗi người chỉ trúng một lần từ cùng tên lửa.
+- C / nút kỹ năng; V / chuột phải khi khóa chuột / nút NGẮM để bật tắt ống ngắm. Ống ngắm cần được nhặt từ hòm và đang cầm súng. Ngắm giảm độ tản, giảm độ nhạy và tắt tự ngắm để bắn đúng tâm.
+- PC bấm cảnh để xin khóa chuột, rê chuột nhìn, chuột trái bắn. Esc mở chuột, Tab mở cài đặt. Khung trình duyệt tích hợp báo WrongDocumentError / UnknownError khi thử khóa; cần thử trực tiếp bằng Chrome/Edge. Khi bị từ chối, game cho giữ chuột phải xoay camera.
+- Các nút kỹ năng, ống ngắm chỉnh vị trí, cỡ và độ rõ riêng trong trình sửa HUD. Đã kiểm tra hình học 18 UI trên mười kích thước/vùng an toàn, cùng kiểm tra đồng bộ ba kết nối.
+
 **Đã triển khai và kiểm tra thành công ngày 05/11/2026.**
 
 - Chơi: **https://chibi-island-mini.onrender.com**
@@ -8,7 +21,7 @@
 - Workspace Render: datpro88.
 - Dịch vụ: chibi-island-mini, Docker, **Free**, **Singapore**, một instance.
 - Kiểm tra sức khỏe: https://chibi-island-mini.onrender.com/health
-- Phiên bản nguồn hiện tại: **0.4.0**. Xem /health và Dashboard để kiểm tra bản Live.
+- Phiên bản Live trên Render: **0.4.0**. Xem /health và Dashboard để kiểm tra bản Live.
 - Mỗi đợt nâng cấp chỉ bàn giao sau khi deploy mới báo Live và qua kiểm tra ba kết nối.
 
 ## Đã kiểm tra

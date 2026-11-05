@@ -1,4 +1,17 @@
-# Chibi Island Mini — bản thử nghiệm 0.4
+# Chibi Island Mini — bản thử local 0.6.0
+
+> **Bản phát hành 0.6.3 đã được người dùng duyệt để cập nhật lên link cố định. Phiên bản đang chạy xem tại /health.**
+
+
+## Bản thử 0.6.0 — Đảo Rừng Gió
+
+- Map mới riêng, diện tích đúng 40 lần Đảo Kẹo (bán kính 31√40 ≈ 196 m); giữ cả Đảo Cỏ Xanh 20× và Đảo Kẹo. Sinh tồn tối đa 10 phút, trận kết thúc sớm nếu còn một người.
+- Lùm cây che vừa nhân vật, chín nhà có cầu thang và bục nhảy lên mái, chín chòi có thang leo bằng E / NHẶT. Có sàn, lan can và va chạm theo độ cao.
+- Hòm thêm một kỹ năng ngẫu nhiên dùng một lần và ống ngắm 3×. Giữ một kỹ năng, dùng hết mới nhặt kỹ năng tiếp; không chồng hiệu lực.
+- Lướt tốc độ ×3 trong 5s; bật cao và bay 4s; hồi 16 máu/s trong 4s; sát thương súng ×2 trong 4s; tên lửa 65 sát thương/người, xuyên người/vật cản, mỗi người chỉ trúng một lần từ cùng tên lửa.
+- C / nút kỹ năng; V / chuột phải khi khóa chuột / nút NGẮM để bật tắt ống ngắm. Ống ngắm cần được nhặt từ hòm và đang cầm súng. Ngắm giảm độ tản, giảm độ nhạy và tắt tự ngắm để bắn đúng tâm.
+- PC bấm cảnh để xin khóa chuột, rê chuột nhìn, chuột trái bắn. Esc mở chuột, Tab mở cài đặt. Khung trình duyệt tích hợp báo WrongDocumentError / UnknownError khi thử khóa; cần thử trực tiếp bằng Chrome/Edge. Khi bị từ chối, game cho giữ chuột phải xoay camera.
+- Các nút kỹ năng, ống ngắm chỉnh vị trí, cỡ và độ rõ riêng trong trình sửa HUD. Đã kiểm tra hình học 18 UI trên mười kích thước/vùng an toàn, cùng kiểm tra đồng bộ ba kết nối.
 
 Bản 0.4 có góc nhìn thứ ba sau vai, map sinh tồn **Đảo Cỏ Xanh** và map đấu trường **Đảo Kẹo**. Có thể bấm **Chơi ngay** để chơi một mình hoặc tạo phòng mời tối đa hai người bạn. Máy chủ bổ sung đối thủ cho đủ tám nhân vật mỗi trận. Giao diện không gắn nhãn từng đối thủ; phần Thông tin trò chơi cho biết trận có thể có đối thủ máy.
 
@@ -50,7 +63,7 @@ Nếu Node chưa có trong PATH trên máy này:
 
 | Bản đồ | Quy mô | Luật chính |
 | --- | --- | --- |
-| Đảo Cỏ Xanh | Diện tích gấp **20 lần** Đảo Kẹo, đường kính khoảng 277 đơn vị | Sinh tồn tối đa 8 phút, bắt đầu chưa có súng, nhặt đồ, vòng bo dịch chuyển qua 5 giai đoạn |
+| Đảo Cỏ Xanh | Diện tích gấp **20 lần** Đảo Kẹo, đường kính khoảng 277 đơn vị | Sinh tồn tối đa 10 phút (bản local 0.5.1), bắt đầu chưa có súng, nhặt đồ, vòng bo dịch chuyển qua 5 giai đoạn |
 | Đảo Kẹo | Giữ kích thước nhỏ ban đầu | Đấu nhanh tối đa 3 phút, có sẵn súng nước và nước không giới hạn |
 
 “Gấp 20 lần” được áp dụng cho **diện tích**, không phải chiều dài mỗi cạnh: bán kính tăng từ 31 lên khoảng 138,64. Map mới có hơn 200 vật cản và hơn 80 vị trí vật phẩm ban đầu. Địa hình nền phẳng với các vật cản có độ cao; chưa có địa hình đồi núi liên tục.
