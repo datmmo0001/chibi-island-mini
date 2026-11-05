@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.env
+.DS_Store
+.tools/
+.runtime/
+CHOI_ONLINE.txt
