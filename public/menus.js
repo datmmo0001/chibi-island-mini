@@ -1,4 +1,5 @@
 import { GAME_VERSION, clamp } from '/shared.js';
+import { createHudLayout } from './hud-layout.js';
 
 export function createMenus({ world, store, resetInput, getSound, toggleSound, getPhase }) {
   let saved = {}; try { saved = JSON.parse(store.get('chibi-settings', '{}')) || {}; } catch {}
@@ -10,6 +11,7 @@ export function createMenus({ world, store, resetInput, getSound, toggleSound, g
   };
   const $ = id => document.getElementById(id), dialogs = [...document.querySelectorAll('.game-dialog')];
   let remoteVersion = null;
+  const hudLayout = createHudLayout({ store, resetInput, getPhase });
   function save() { store.set('chibi-settings', JSON.stringify(settings)); world.configure(settings); }
   function refreshNotice() {
     $('version-notice').hidden = !remoteVersion || getPhase() === 'playing';
@@ -45,5 +47,5 @@ export function createMenus({ world, store, resetInput, getSound, toggleSound, g
   $('sound-setting').onchange = () => { if ($('sound-setting').checked !== getSound()) toggleSound(); };
   $('refresh-version').onclick = () => location.reload();
   setInterval(checkVersion, 60000); document.addEventListener('visibilitychange', checkVersion);
-  return { isOpen: () => dialogs.some(dialog => dialog.open), volume: () => settings.volume, syncSound, refreshNotice, announceVersion };
+  return { isOpen: () => hudLayout.isEditing() || dialogs.some(dialog => dialog.open), volume: () => settings.volume, syncSound, refreshNotice, announceVersion };
 }

@@ -8,6 +8,7 @@
   <title>Chibi Island · Đảo nhỏ, niềm vui lớn</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/hud.css">
   <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
 </head>
 <body>
@@ -23,12 +24,12 @@
       <div class="eyebrow"><span class="spark">✦</span> HẸN NHAU TRÊN ĐẢO CHIBI</div>
       <h1>Nhỏ xíu.<br>Vui <span>hết cỡ!</span><svg class="underline" viewBox="0 0 260 15" aria-hidden="true"><path d="M4 10 Q120 -2 254 6"/></svg></h1>
       <p class="intro">Mặc đồ thật xinh, rủ hội bạn thân.<br>Một trận súng nước, cả đảo cười vui.</p>
-      <div class="mode-chips"><span><b>Góc nhìn thứ ba</b></span><span><b>1–3</b> bạn cùng chơi</span><span id="match-duration-tag"><b>8′</b> sinh tồn</span></div>
+      <div class="mode-chips"><span><b>Góc nhìn thứ ba</b></span><span><b>1–3</b> bạn cùng chơi</span><span id="match-duration-tag"><b>10′</b> sinh tồn</span></div>
       <div class="play-card">
         <div class="section-heading"><h2>Sẵn sàng lên đảo?</h2><span>01 / CHỌN NHÂN VẬT</span></div>
         <label class="field-label" for="map-select">Bản đồ & chế độ</label>
-        <select id="map-select"><option value="meadow">Đảo Cỏ Xanh · Sinh tồn · Diện tích 20×</option><option value="candy">Đảo Kẹo · Đấu trường nhanh</option></select>
-        <label class="field-label" for="player-name">Tên của bạn</label>
+        <select id="map-select"><option value="frontier">MỚI · Đảo Rừng Gió · Sinh tồn · Diện tích 40×</option><option value="meadow">Đảo Cỏ Xanh · Sinh tồn · Diện tích 20×</option><option value="candy">Đảo Kẹo · Đấu trường nhanh</option></select>
+        <label class="field-label" for="room-size">Số người chơi</label><select id="room-size"><option value="3">Phòng tối đa 3 người</option><option value="5">Phòng tối đa 5 người</option><option value="20">Phòng tối đa 20 người · Rừng Gió</option></select><label class="mode-option"><input type="checkbox" id="respawn-mode"> Đảo Kẹo: hồi sinh 3s · tính kill</label><details class="home-chat"><summary>Chat online</summary><div id="online-chat" aria-live="polite"></div><input id="chat-message" maxlength="160" placeholder="Nhắn với mọi người"><button type="button" id="chat-send">Gửi</button></details><label class="field-label" for="player-name">Tên của bạn</label>
         <input id="player-name" maxlength="18" placeholder="Đặt một cái tên dễ thương" autocomplete="nickname" value="">
         <div class="outfit-list" id="outfits" role="group" aria-label="Chọn trang phục"></div>
         <div class="hat-row"><span>Phụ kiện</span><div id="hats" role="group" aria-label="Chọn phụ kiện"></div></div>
@@ -42,7 +43,7 @@
       <details class="game-info"><summary>Thông tin trò chơi</summary><p>Bạn có thể chơi riêng hoặc rủ bạn. Trận đấu có thể có đối thủ máy để bổ sung chỗ trống.</p></details>
     </section>
     <aside class="island-caption"><div class="floating-tag"><span>☀</span><span id="hero-map-name">ĐẢO CỎ XANH</span><i></i></div><h2 id="hero-map-heading">Đảo rộng hơn.<br>Phiêu lưu xa hơn.</h2><p id="preview-note">Nhảy qua bục · Nhặt súng · Chạy vào bo</p><span id="hero-map-subtitle" class="island-coordinate">DIỆN TÍCH 20× &nbsp; / &nbsp; GÓC NHÌN THỨ BA</span></aside>
-    <footer class="home-footer"><span>Made for little adventures.</span><span><kbd>WASD</kbd> DI CHUYỂN <span class="footer-dot">·</span> GIỮ CHUỘT PHẢI ĐỂ XOAY CAMERA</span></footer>
+    <footer class="home-footer"><span>Made for little adventures.</span><span><kbd>WASD</kbd> DI CHUYỂN <span class="footer-dot">·</span> BẤM VÀO CẢNH ĐỂ KHÓA CHUỘT</span></footer>
   </main>
 
   <section id="lobby" class="overlay-panel" hidden>
@@ -57,28 +58,45 @@
   </section>
 
   <section id="hud" hidden>
-    <div class="match-top"><div class="match-badge"><span class="live-dot"></span><b id="alive-count">8</b><span>CÒN TRÊN ĐẢO</span></div><div class="timer"><small id="zone-phase">VÒNG BO</small><strong id="timer">00:35</strong></div><button id="leave-game" class="icon-button" aria-label="Rời trận" title="Rời trận">↪</button></div>
-    <div class="map-meta"><b id="map-name">Đảo Cỏ Xanh</b><span id="match-clock">08:00</span><small id="zone-distance"></small></div>
-    <div class="hud-tools"><button class="icon-button" id="mark-position" aria-label="Đánh dấu phía trước" title="T · Đánh dấu phía trước">⌖</button><button class="icon-button" data-dialog="guide-dialog" aria-label="Cách chơi" title="Cách chơi">?</button><button class="icon-button" data-dialog="settings-dialog" aria-label="Cài đặt" title="Cài đặt">⚙</button><small id="marker-hint">T · Đánh dấu</small></div>
-    <div id="compass" aria-label="La bàn"><span id="compass-name">BẮC</span><b id="compass-degrees">000°</b></div>
+    <div id="kill-notice" role="status"></div><strong id="timer" class="timer hud-widget" data-hud="timer" aria-label="Thời gian còn lại">10:00</strong>
+    <div class="match-badge hud-widget" data-hud="alive"><b id="alive-count">8</b><span>CÒN TRÊN ĐẢO</span></div>
+    <div class="map-meta" aria-hidden="true"><b id="map-name">Đảo Cỏ Xanh</b><span id="match-clock">10:00</span><small id="zone-distance"></small><small id="zone-phase"></small></div>
+    <div class="hud-tools hud-widget" data-hud="tools"><button class="icon-button" data-dialog="settings-dialog" aria-label="Cài đặt" title="Cài đặt">⚙</button><button class="icon-button" id="mark-position" aria-label="Đánh dấu phía trước" title="T · Đánh dấu phía trước">⌖</button><button class="icon-button" data-dialog="guide-dialog" aria-label="Cách chơi" title="Cách chơi">?</button><button id="leave-game" class="icon-button" aria-label="Rời trận" title="Rời trận">↪</button><small id="marker-hint">T · Đánh dấu</small></div>
+    <div id="compass" class="hud-widget" data-hud="compass" aria-label="La bàn"><span id="compass-name">BẮC</span><b id="compass-degrees">000°</b></div>
     <div id="crosshair" aria-label="Tâm ngắm"><i></i><i></i><i></i><i></i></div>
-    <div id="zone-warning" hidden>☂ Bạn đang ngoài vòng bo! Chạy vào vòng sáng nhé.</div>
-    <div id="feed" aria-live="polite"></div>
-    <div class="status-card"><div class="status-heading"><span id="my-name">Bạn</span><span id="kills">0 lần loại</span></div><div class="health-track"><div id="health-fill"></div></div><div class="health-caption"><span>♥ SỨC KHỎE</span><b id="health-number">100 / 100</b></div></div>
+    <div id="zone-warning" class="hud-widget" data-hud="warning" hidden>☂ Bạn đang ngoài vòng bo! Chạy vào vòng sáng nhé.</div>
+    <div id="feed" class="hud-widget" data-hud="feed" aria-live="polite"></div>
+    <div class="status-card hud-widget" data-hud="health" role="img" aria-label="Sức khỏe 100%"><svg class="health-ring" viewBox="0 0 64 64" aria-hidden="true"><circle class="health-track" cx="32" cy="32" r="27"/><circle id="health-fill" cx="32" cy="32" r="27" pathLength="100" stroke-dasharray="100" stroke-dashoffset="0"/></svg><b id="health-number">100%</b><span class="health-symbol" aria-hidden="true">♥</span><span id="my-name" class="sr-only">Bạn</span><span id="kills" class="sr-only">0 lần loại</span></div>
     <div id="spectating" hidden>Bạn đã hóa bóng bay 🎈<br><small>Đang theo dõi những người còn lại</small></div>
-    <div class="weapon-card"><b id="weapon-name">Chưa có súng</b><div class="ammo"><strong id="ammo-mag">—</strong><span id="ammo-reserve">Tìm vật phẩm phát sáng</span></div><div id="weapon-slots"><button id="weapon-slot-0" aria-label="Chọn súng thứ nhất">1 · Trống</button><button id="weapon-slot-1" aria-label="Chọn súng thứ hai">2 · Trống</button></div><small id="reload-status"></small><div id="reload-progress" role="progressbar" aria-label="Tiến độ nạp đạn" aria-valuemin="0" aria-valuemax="100" hidden><i></i></div><span id="medkit-count">Bình hồi phục: 0</span></div>
-    <div id="interact-prompt" hidden><kbd>E</kbd><span id="interact-text">Nhặt vật phẩm</span></div>
-    <div class="desktop-tip"><kbd>WASD</kbd> đi <kbd>Shift</kbd> chạy <kbd>Space</kbd> nhảy <kbd>E</kbd> nhặt/mở <kbd>R</kbd> nạp <kbd>Q</kbd> đổi súng <kbd>H</kbd> hồi phục · Giữ chuột phải xoay camera</div>
-    <canvas id="minimap" width="170" height="170" aria-label="Bản đồ nhỏ"></canvas>
-    <div id="touch-controls"><div id="joystick" aria-label="Cần di chuyển"><div id="joystick-knob"></div></div><button id="touch-fire" aria-label="Giữ để tự ngắm và bắn">◎<small>BẮN</small></button><button id="touch-jump" class="round-action" aria-label="Nhảy">↑<small>NHẢY</small></button><button id="touch-sprint" class="round-action" aria-label="Bật tắt chạy nhanh">»<small>CHẠY</small></button><div class="mobile-actions"><button id="touch-interact" aria-label="Nhặt đồ hoặc mở vật cản">E<small>NHẶT / MỞ</small></button><button id="touch-reload" aria-label="Nạp đạn">R<small>NẠP</small></button><button id="touch-swap" aria-label="Đổi súng">⇄<small>ĐỔI</small></button><button id="touch-heal" aria-label="Dùng bình hồi phục">♥<small>HỒI PHỤC</small></button></div><div class="look-tip">Vuốt bên phải để xoay camera</div></div>
+    <div class="weapon-card hud-widget" data-hud="weapon"><div class="weapon-visual"><svg id="weapon-icon" viewBox="0 0 112 44" aria-hidden="true"><use id="weapon-icon-use" href="/weapon-icons.svg#none"/></svg><b id="weapon-name" class="sr-only">Chưa có súng</b></div><div class="ammo"><strong id="ammo-mag">—</strong><span id="ammo-reserve">Tìm vật phẩm phát sáng</span></div><div id="weapon-slots"><button id="weapon-slot-0" aria-label="Chọn súng thứ nhất">1 · Trống</button><button id="weapon-slot-1" aria-label="Chọn súng thứ hai">2 · Trống</button></div><small id="reload-status"></small><div id="reload-progress" role="progressbar" aria-label="Tiến độ nạp đạn" aria-valuemin="0" aria-valuemax="100" hidden><i></i></div><span id="medkit-count">Bình hồi phục: 0</span></div>
+    <div id="interact-prompt" class="hud-widget" data-hud="interaction" hidden><kbd>E</kbd><span id="interact-text">Nhặt vật phẩm</span></div>
+    <div class="desktop-tip"><kbd>WASD</kbd> đi <kbd>Shift</kbd> chạy <kbd>Space</kbd> nhảy <kbd>E</kbd> nhặt/mở <kbd>R</kbd> nạp <kbd>Q</kbd> đổi súng <kbd>H</kbd> hồi phục · C kỹ năng · V ngắm · Esc mở chuột</div>
+    <canvas id="minimap" class="hud-widget" data-hud="minimap" width="170" height="170" aria-label="Bản đồ nhỏ"></canvas>
+    <div id="scope-overlay" aria-hidden="true" hidden><i></i><b>3×</b></div>
+    <button id="touch-skill" class="round-action compact-action hud-widget ability-button" data-hud="skill" aria-label="Dùng kỹ năng" disabled><span id="skill-icon">✦</span><small id="skill-label">MỞ HÒM</small></button>
+    <button id="touch-scope" class="round-action compact-action hud-widget ability-button" data-hud="scope" aria-label="Bật tắt ống ngắm" aria-pressed="false" disabled><span>⊕</span><small id="scope-label">NGẮM</small></button>
+    <div id="mouse-lock-hint">Bấm vào cảnh để khóa chuột · Esc mở chuột · Tab cài đặt</div>
+    <div id="touch-controls">
+      <div id="joystick" class="hud-widget" data-hud="joystick" aria-label="Cần di chuyển"><div id="joystick-knob"></div></div>
+      <button id="touch-fire" class="hud-widget" data-hud="fire" aria-label="Giữ để tự ngắm và bắn">◎<small>BẮN</small></button>
+      <button id="touch-jump" class="round-action hud-widget" data-hud="jump" aria-label="Nhảy">↑<small>NHẢY</small></button>
+      <button id="touch-sprint" class="round-action hud-widget" data-hud="sprint" aria-label="Bật tắt chạy nhanh">»<small>CHẠY</small></button>
+      <button id="touch-interact" class="round-action hud-widget" data-hud="pickup" aria-label="Nhặt đồ hoặc mở vật cản">⇩<small>NHẶT</small></button>
+      <button id="touch-swap" class="round-action compact-action hud-widget" data-hud="swap" aria-label="Đổi súng">⇄<small>ĐỔI</small></button>
+      <button id="touch-heal" class="round-action compact-action hud-widget" data-hud="heal" aria-label="Dùng bình hồi phục">✚<small>0</small></button>
+      <button id="touch-reload" class="round-action compact-action hud-widget" data-hud="reload" aria-label="Nạp đạn">↻<small>NẠP</small></button>
+    </div>
   </section>
 
+  <button id="fullscreen-toggle" class="hud-widget fullscreen-button" data-hud="fullscreen" aria-label="Toàn màn hình" aria-pressed="false" title="Toàn màn hình"><svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3m8 0v5h5M8 21v-5H3m18 0h-5v5"/></svg></button>
   <section id="results" class="results-backdrop" hidden><div class="results-card"><div class="result-flower">✿</div><div class="eyebrow">MỘT TRẬN THẬT VUI!</div><h1 id="result-title">Đảo có quán quân!</h1><p id="winner-name"></p><div id="scoreboard"></div><button class="primary" id="rematch">Về phòng chờ ↗</button><button class="text-button" id="leave-results">Rời phòng</button></div></section>
   <div id="damage-vignette" aria-hidden="true"></div>
   <dialog id="guide-dialog" class="game-dialog" aria-labelledby="guide-title">
     <button class="dialog-close" data-close-dialog aria-label="Đóng cách chơi">×</button><div class="eyebrow">✦ HÀNH TRANG LÊN ĐẢO</div><h2 id="guide-title">Ba bước để giữ đảo.</h2>
-    <div class="guide-steps"><article><b>01 · NHẶT ĐỒ</b><p>Trên Đảo Cỏ Xanh, đến gần súng phát sáng và bấm <kbd>E</kbd> hoặc nút <strong>NHẶT / MỞ</strong>. Hòm tiếp tế có thêm đồ, thùng gỗ có thể bắn vỡ.</p></article><article><b>02 · DI CHUYỂN & BẮN</b><p><kbd>WASD</kbd> đi · <kbd>Shift</kbd> chạy · <kbd>Space</kbd> nhảy. Giữ chuột phải xoay camera, chuột trái bắn. Điện thoại: cần trái để đi, vuốt phải để nhìn, giữ <strong>BẮN</strong> để hỗ trợ ngắm.</p></article><article><b>03 · THEO VÒNG BO</b><p>Ở trong vòng xanh trên bản đồ nhỏ. Vòng nét đứt là vùng tiếp theo. Người cuối cùng còn sống thắng.</p></article></div>
-    <div class="guide-shortcuts"><span><kbd>R</kbd> Nạp nước</span><span><kbd>Q</kbd> Đổi súng</span><span><kbd>H</kbd> Hồi phục</span><span><kbd>T</kbd> Đánh dấu phía trước</span><span><kbd>F</kbd> Bắn có hỗ trợ ngắm</span></div>
+    <div class="guide-steps"><article><b>01 · NHẶT ĐỒ</b><p>Trên Đảo Cỏ Xanh, đến gần súng phát sáng và bấm <kbd>E</kbd> hoặc nút <strong>NHẶT / MỞ</strong>. Hòm tiếp tế có thêm đồ, thùng gỗ có thể bắn vỡ.</p></article><article><b>02 · DI CHUYỂN & BẮN</b><p><kbd>WASD</kbd> đi · <kbd>Shift</kbd> chạy · <kbd>Space</kbd> nhảy. Bấm vào cảnh để khóa chuột vào tâm ngắm; rê chuột để nhìn, chuột trái bắn. <kbd>Esc</kbd> mở chuột, <kbd>Tab</kbd> cài đặt. Điện thoại: cần trái để đi, vuốt phải để nhìn, giữ <strong>BẮN</strong> để hỗ trợ ngắm.</p></article><article><b>03 · THEO VÒNG BO</b><p>Ở trong vòng xanh trên bản đồ nhỏ. Vòng nét đứt là vùng tiếp theo. Người cuối cùng còn sống thắng.</p></article></div>
+    <div class="guide-shortcuts"><span><kbd>R</kbd> Nạp nước</span><span><kbd>Q</kbd> Đổi súng</span><span><kbd>H</kbd> Hồi phục</span><span><kbd>T</kbd> Đánh dấu phía trước</span><span><kbd>F</kbd> Bắn có hỗ trợ ngắm</span><span><kbd>C</kbd> Kỹ năng</span><span><kbd>V</kbd> / chuột phải: Ống ngắm</span></div>
+    <p class="dialog-note">Đảo Rừng Gió rộng 40 lần diện tích Đảo Kẹo. Đi thẳng lên cầu thang để lên mái nhà; bấm E / NHẶT cạnh thang chòi để leo lên hoặc xuống. Núp giữa lùm cây để ẩn; bắn hoặc dùng kỹ năng sẽ lộ vị trí.</p>
+    <p class="dialog-note">Mở hòm để nhặt ống ngắm 3× và một kỹ năng dùng một lần: lướt ×3 trong 5s; bật cao và bay 4s; hồi 16 máu/s trong 4s; sát thương ×2 trong 4s; hoặc tên lửa xuyên vật cản và người, 65 sát thương. Mỗi lần giữ một kỹ năng, dùng xong nhặt tiếp. Ngắm từ xa tắt hỗ trợ tự ngắm để bắn đúng tâm.</p>
     <p class="dialog-note">Rủ bạn: tạo phòng, gửi lời mời, tất cả sẵn sàng rồi chủ phòng bắt đầu. Đảo Kẹo có sẵn súng khi vào trận.</p><p class="live-match-note" hidden>Trận vẫn tiếp diễn khi mở hướng dẫn hoặc cài đặt.</p><button class="primary" data-close-dialog>Đã hiểu · Quay lại game</button>
   </dialog>
   <dialog id="settings-dialog" class="game-dialog" aria-labelledby="settings-title">
@@ -88,8 +106,24 @@
     <label class="setting-check"><input id="invert-setting" type="checkbox">Đảo chiều nhìn lên / xuống</label>
     <label class="setting-check"><input id="sound-setting" type="checkbox">Bật âm thanh</label>
     <label class="setting-field" for="volume-setting">Âm lượng <output id="volume-value">70%</output><input id="volume-setting" type="range" min="0" max="100" step="5" value="70"></label>
+    <button id="edit-hud" class="secondary full">Chỉnh bố cục UI · Kéo, đổi cỡ, độ mờ ↗</button><p class="dialog-note hud-settings-note">Xem trước các nút ngay cả khi chưa vào trận. Lưu riêng bố cục dọc và ngang trên thiết bị này.</p>
     <p class="dialog-note">Tùy chỉnh được lưu trên thiết bị này. Chọn “Nhẹ máy” nếu hình ảnh bị giật hoặc máy nóng.</p><p class="live-match-note" hidden>Trận vẫn tiếp diễn khi mở hướng dẫn hoặc cài đặt.</p><button class="primary" data-close-dialog>Xong · Quay lại</button>
   </dialog>
+  <div id="hud-safe" aria-hidden="true"></div>
+  <section id="hud-editor" role="dialog" aria-modal="true" aria-label="Chỉnh bố cục UI" hidden>
+    <div id="hud-editor-canvas"></div>
+    <div id="hud-editor-panel" role="region" aria-label="Tùy chỉnh UI">
+      <div class="hud-editor-heading"><b id="hud-orientation">Bố cục ngang</b><button id="hud-collapse">Thu gọn</button></div>
+      <div class="hud-editor-body"><p id="hud-edit-note"></p><label for="hud-widget-select">UI đang chọn</label><select id="hud-widget-select"></select>
+        <div class="hud-editor-grid">
+          <label class="setting-field" for="hud-x">Vị trí ngang <output id="hud-x-value"></output><input id="hud-x" type="range" min="0" max="100" step="1"></label>
+          <label class="setting-field" for="hud-y">Vị trí dọc <output id="hud-y-value"></output><input id="hud-y" type="range" min="0" max="100" step="1"></label>
+          <label class="setting-field" for="hud-scale">Kích thước <output id="hud-scale-value"></output><input id="hud-scale" type="range" min="60" max="150" step="5"></label>
+          <label class="setting-field" for="hud-opacity">Độ rõ <output id="hud-opacity-value"></output><input id="hud-opacity" type="range" min="25" max="100" step="5"></label>
+        </div><div class="hud-editor-buttons"><button id="hud-reset">Mặc định</button><button id="hud-cancel">Hủy</button><button id="hud-save">Lưu UI</button></div>
+      </div>
+    </div>
+  </section>
   <div id="version-notice" role="status" hidden><span>Có phiên bản mới</span><button id="refresh-version">Tải bản mới</button></div>
   <div id="toast" role="status" hidden></div>
   <div id="fatal" hidden><div><h2>Chưa mở được đảo 3D</h2><p id="fatal-message"></p><button class="primary" onclick="location.reload()">Thử lại</button></div></div>
