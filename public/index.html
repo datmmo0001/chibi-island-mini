@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#edf8ef">
+  <meta name="description" content="Đảo nhỏ, niềm vui lớn. Chơi ngay hoặc rủ bạn cùng đấu súng nước trên Chibi Island.">
+  <title>Chibi Island · Đảo nhỏ, niềm vui lớn</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+  <canvas id="world" aria-label="Đảo Chibi 3D"></canvas>
+  <div class="vignette"></div>
+  <header id="header">
+    <a class="brand" href="/" aria-label="Chibi Island trang chủ"><span class="brand-mark">✿</span><span>chibi<span class="brand-light">island</span><small>ĐẢO NHỎ, NIỀM VUI LỚN</small></span></a>
+    <div class="header-right"><span class="connection" id="connection"><i></i> Đang kết nối…</span><span class="build">PLAYTEST 03</span><button class="icon-button" id="sound" aria-label="Bật âm thanh" title="Bật/tắt âm thanh">♫</button></div>
+  </header>
+
+  <main id="home">
+    <section class="welcome">
+      <div class="eyebrow"><span class="spark">✦</span> HẸN NHAU TRÊN ĐẢO KẸO</div>
+      <h1>Nhỏ xíu.<br>Vui <span>hết cỡ!</span><svg class="underline" viewBox="0 0 260 15" aria-hidden="true"><path d="M4 10 Q120 -2 254 6"/></svg></h1>
+      <p class="intro">Mặc đồ thật xinh, rủ hội bạn thân.<br>Một trận súng nước, cả đảo cười vui.</p>
+      <div class="mode-chips"><span><b>Góc nhìn thứ ba</b></span><span><b>1–3</b> bạn cùng chơi</span><span id="match-duration-tag"><b>8′</b> sinh tồn</span></div>
+      <div class="play-card">
+        <div class="section-heading"><h2>Sẵn sàng lên đảo?</h2><span>01 / CHỌN NHÂN VẬT</span></div>
+        <label class="field-label" for="map-select">Bản đồ & chế độ</label>
+        <select id="map-select"><option value="meadow">Đảo Cỏ Xanh · Sinh tồn · Diện tích 20×</option><option value="candy">Đảo Kẹo · Đấu trường nhanh</option></select>
+        <label class="field-label" for="player-name">Tên của bạn</label>
+        <input id="player-name" maxlength="18" placeholder="Đặt một cái tên dễ thương" autocomplete="nickname" value="">
+        <div class="outfit-list" id="outfits" role="group" aria-label="Chọn trang phục"></div>
+        <div class="hat-row"><span>Phụ kiện</span><div id="hats" role="group" aria-label="Chọn phụ kiện"></div></div>
+        <button class="primary" id="solo">Chơi ngay <span>→</span></button>
+        <button class="secondary full" id="create">Tạo phòng cùng bạn <span>↗</span></button>
+        <div class="join-divider"><span>đã có lời mời?</span></div>
+        <form id="join-form" class="join-row"><label class="sr-only" for="room-code">Mã phòng</label><input id="room-code" placeholder="NHẬP MÃ PHÒNG" maxlength="6" autocomplete="off"><button class="secondary" type="submit">Vào phòng <span>→</span></button></form>
+      </div>
+      <p class="home-note"><span>✧</span> Chơi ngay hoặc rủ bạn · Không cần tài khoản</p>
+      <details class="game-info"><summary>Thông tin trò chơi</summary><p>Bạn có thể chơi riêng hoặc rủ bạn. Trận đấu có thể có đối thủ máy để bổ sung chỗ trống.</p></details>
+    </section>
+    <aside class="island-caption"><div class="floating-tag"><span>☀</span><span id="hero-map-name">ĐẢO CỎ XANH</span><i></i></div><h2 id="hero-map-heading">Đảo rộng hơn.<br>Phiêu lưu xa hơn.</h2><p id="preview-note">Nhảy qua bục · Nhặt súng · Chạy vào bo</p><span id="hero-map-subtitle" class="island-coordinate">DIỆN TÍCH 20× &nbsp; / &nbsp; GÓC NHÌN THỨ BA</span></aside>
+    <footer class="home-footer"><span>Made for little adventures.</span><span><kbd>WASD</kbd> DI CHUYỂN <span class="footer-dot">·</span> GIỮ CHUỘT PHẢI ĐỂ XOAY CAMERA</span></footer>
+  </main>
+
+  <section id="lobby" class="overlay-panel" hidden>
+    <div class="eyebrow">✦ HỘI BẠN ĐÃ ĐẾN</div><h1>Phòng chờ<br><span>của chúng mình.</span></h1>
+    <div class="room-code-card"><div><span>MÃ PHÒNG</span><strong id="lobby-code">------</strong></div><button class="secondary" id="copy-invite">Sao chép lời mời ↗</button></div>
+    <p class="lobby-description">Mời thêm bạn hoặc bắt đầu ngay khi đã sẵn sàng.</p>
+    <div id="player-slots"></div>
+    <div class="bot-note"><span>✿</span><div><b>Cuộc phiêu lưu đang chờ bạn</b><small>Mỗi trận có 8 nhân vật cùng tranh tài</small></div><span>✦</span></div>
+    <button class="primary" id="ready">Mình sẵn sàng! ✓</button>
+    <button class="secondary full" id="start" disabled>Chờ mọi người sẵn sàng</button>
+    <div class="lobby-bottom"><span id="lobby-count">1/3 bạn đã vào phòng</span><button class="text-button" id="leave-lobby">Rời phòng</button></div>
+  </section>
+
+  <section id="hud" hidden>
+    <div class="match-top"><div class="match-badge"><span class="live-dot"></span><b id="alive-count">8</b><span>CÒN TRÊN ĐẢO</span></div><div class="timer"><small id="zone-phase">VÒNG BO</small><strong id="timer">00:35</strong></div><button id="leave-game" class="icon-button" aria-label="Rời trận" title="Rời trận">↪</button></div>
+    <div class="map-meta"><b id="map-name">Đảo Cỏ Xanh</b><span id="match-clock">08:00</span><small id="zone-distance"></small></div>
+    <div id="crosshair" aria-label="Tâm ngắm"><i></i><i></i><i></i><i></i></div>
+    <div id="zone-warning" hidden>☂ Bạn đang ngoài vòng bo! Chạy vào vòng sáng nhé.</div>
+    <div id="feed" aria-live="polite"></div>
+    <div class="status-card"><div class="status-heading"><span id="my-name">Bạn</span><span id="kills">0 lần loại</span></div><div class="health-track"><div id="health-fill"></div></div><div class="health-caption"><span>♥ SỨC KHỎE</span><b id="health-number">100 / 100</b></div></div>
+    <div id="spectating" hidden>Bạn đã hóa bóng bay 🎈<br><small>Đang theo dõi những người còn lại</small></div>
+    <div class="weapon-card"><b id="weapon-name">Chưa có súng</b><div class="ammo"><strong id="ammo-mag">—</strong><span id="ammo-reserve">Tìm vật phẩm phát sáng</span></div><div id="weapon-slots"><button id="weapon-slot-0" aria-label="Chọn súng thứ nhất">1 · Trống</button><button id="weapon-slot-1" aria-label="Chọn súng thứ hai">2 · Trống</button></div><small id="reload-status"></small><span id="medkit-count">Bình hồi phục: 0</span></div>
+    <div id="interact-prompt" hidden><kbd>E</kbd><span id="interact-text">Nhặt vật phẩm</span></div>
+    <div class="desktop-tip"><kbd>WASD</kbd> đi <kbd>Shift</kbd> chạy <kbd>Space</kbd> nhảy <kbd>E</kbd> nhặt/mở <kbd>R</kbd> nạp <kbd>Q</kbd> đổi súng <kbd>H</kbd> hồi phục · Giữ chuột phải xoay camera</div>
+    <canvas id="minimap" width="170" height="170" aria-label="Bản đồ nhỏ"></canvas>
+    <div id="touch-controls"><div id="joystick" aria-label="Cần di chuyển"><div id="joystick-knob"></div></div><button id="touch-fire" aria-label="Giữ để tự ngắm và bắn">◎<small>BẮN</small></button><button id="touch-jump" class="round-action" aria-label="Nhảy">↑<small>NHẢY</small></button><button id="touch-sprint" class="round-action" aria-label="Bật tắt chạy nhanh">»<small>CHẠY</small></button><div class="mobile-actions"><button id="touch-interact" aria-label="Nhặt đồ hoặc mở vật cản">E<small>NHẶT / MỞ</small></button><button id="touch-reload" aria-label="Nạp đạn">R<small>NẠP</small></button><button id="touch-swap" aria-label="Đổi súng">⇄<small>ĐỔI</small></button><button id="touch-heal" aria-label="Dùng bình hồi phục">♥<small>HỒI PHỤC</small></button></div><div class="look-tip">Vuốt bên phải để xoay camera</div></div>
+  </section>
+
+  <section id="results" class="results-backdrop" hidden><div class="results-card"><div class="result-flower">✿</div><div class="eyebrow">MỘT TRẬN THẬT VUI!</div><h1 id="result-title">Đảo có quán quân!</h1><p id="winner-name"></p><div id="scoreboard"></div><button class="primary" id="rematch">Về phòng chờ ↗</button><button class="text-button" id="leave-results">Rời phòng</button></div></section>
+  <div id="toast" role="status" hidden></div>
+  <div id="fatal" hidden><div><h2>Chưa mở được đảo 3D</h2><p id="fatal-message"></p><button class="primary" onclick="location.reload()">Thử lại</button></div></div>
+  <script type="module" src="/client.js"></script>
+</body>
+</html>
