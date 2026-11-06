@@ -37,3 +37,11 @@ test('survival has a ten minute budget with continuous storm stages across the m
   let elapsed=0;for(const stage of map.zones){elapsed+=stage.wait+stage.shrink;const a=zoneAt(map,elapsed-.0001),b=zoneAt(map,elapsed);assert.ok(Math.abs(a.radius-b.radius)<.001);assert.ok(Math.hypot(a.x-b.x,a.z-b.z)<.001);}
   assert.equal(elapsed,570);assert.ok(zoneAt(map,480).radius>5);assert.equal(zoneAt(map,600).radius,5);
 });
+
+test('photo 7 positions retain user sizes and opacity as landscape defaults',()=>{
+  const d=defaultWidgets(915,412);
+  assert.equal(d.fire.x,.907);assert.equal(d.fire.y,.780);assert.equal(d.sprint.x,.815);assert.equal(d.skill.x,.733);
+  assert.equal(d.fire.scale,1.45);assert.equal(d.fire.opacity,.65);
+  assert.equal(d.skill.scale,1.1);assert.equal(d.skill.opacity,.8);
+  assert.equal(d.compass.y,0.09402619949494949);
+});

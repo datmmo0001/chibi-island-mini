@@ -21,9 +21,9 @@ test('repeated respawns remove balloon groups and clear rising state at the actu
   assert.equal(resetRespawnVisual(actor,{alive:true,x:i,y:0,z:-i},()=>disposed++),false);
  }assert.equal(disposed,8);
 });
-test('fire diameter is thirty percent smaller and the thumb arc is closer',()=>{
+test('fire retains its base diameter and uses the latest photo arc on landscape',()=>{
  for(const [w,h]of [[390,844],[915,412]]){
   const d=defaultWidgets(w,h);assert.ok(Math.abs(d.fire.width-88*.7)<1e-9);assert.ok(Math.abs(d.fire.height-88*.7)<1e-9);
-  const usable=w-16;if(w<h)assert.ok(Math.abs((d.fire.x-d.jump.x)*usable-74)<1e-7);else assert.ok(d.scope.x<d.joystick.x+.08);assert.ok((d.fire.x-d.skill.x)*usable<=140.001);
+  const usable=w-16;if(w<h)assert.ok(Math.abs((d.fire.x-d.jump.x)*usable-74)<1e-7);else assert.ok(d.scope.x<d.joystick.x+.08);if(w<h)assert.ok((d.fire.x-d.skill.x)*usable<=140.001);else{assert.ok(d.skill.x<d.sprint.x&&d.sprint.x<d.fire.x);assert.ok(d.sprint.y<d.fire.y);}
  }
 });
