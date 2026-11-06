@@ -1,9 +1,10 @@
+import { USER_LANDSCAPE_HUD } from './hud-preset.js';
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 const finite = (n, fallback) => typeof n === 'number' && Number.isFinite(n) ? n : fallback;
 export const HUD_LABELS = Object.freeze({ timer:'Thời gian', alive:'Số người còn lại', tools:'Nút tiện ích', compass:'La bàn', health:'Vòng máu', weapon:'Súng và đạn', minimap:'Bản đồ nhỏ', fullscreen:'Toàn màn hình', joystick:'Cần di chuyển', fire:'Nút bắn', jump:'Nút nhảy', sprint:'Nút chạy', pickup:'Nút nhặt / mở', reload:'Nút nạp đạn', swap:'Nút đổi súng', heal:'Nút hồi máu', skill:'Nút kỹ năng', scope:'Nút ống ngắm', interaction:'Gợi ý nhặt đồ', warning:'Cảnh báo vòng bo', feed:'Thông báo trận' });
 // The old grouped action row must not override the new independent arc buttons.
 // Keep the old key intact as a rollback; save this revision independently.
-export const HUD_STORAGE = 'chibi-hud-reference-v4';
+export const HUD_STORAGE = 'chibi-hud-photo-v7';
 export const layoutMode = (width, height) => width > height ? 'landscape' : 'portrait';
 export function cleanLayouts(raw) {
   const result = { portrait:{}, landscape:{} };
@@ -15,6 +16,16 @@ export function cleanLayouts(raw) {
   return result;
 }
 export function defaultWidgets(width, height, touch = true, safe = {}) {
+  const defaults=baseWidgets(width,height,touch,safe);
+  if(layoutMode(width,height)==='landscape' && width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)>=780) for(const id of ['compass','joystick','fire','jump','sprint','pickup','skill','scope']) defaults[id]={...defaults[id],...USER_LANDSCAPE_HUD[id]};
+  if(width>height && width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)>=700){
+    // Image 7: fire at lower right, sprint above-left, skill further left.
+    const positions={fire:[.907,.780],sprint:[.815,.620],skill:[.733,.665],jump:[.805,.800],pickup:[.885,.523],swap:[.952,.563],reload:[.739,.876]};
+    for(const [id,[x,y]] of Object.entries(positions)) defaults[id]={...defaults[id],x,y,...(['fire','skill'].includes(id)?{scale:USER_LANDSCAPE_HUD[id].scale,opacity:USER_LANDSCAPE_HUD[id].opacity}:{})};
+  }
+  return defaults;
+}
+function baseWidgets(width, height, touch = true, safe = {}) {
   width-=Math.max(8,safe.left||0)+Math.max(8,safe.right||0);
   height-=Math.max(8,safe.top||0)+Math.max(8,safe.bottom||0);
   const portrait = layoutMode(width,height) === 'portrait', small = width < 360;
@@ -37,7 +48,7 @@ export function defaultWidgets(width, height, touch = true, safe = {}) {
       reload:item(width*.739,height*.876,44,44),
       minimap:item(mapX,height*.137,mapSize,mapSize),fullscreen:item(width*.862,height*.109,40,40),
       joystick:item(width*.137,height*.756,104,104),scope:item(width*.192,height*.501,44,44),
-      fire:item(width*.905,height*.773,61.6,61.6),jump:item(width*.810,height*.840,52,52),
+      fire:item(width*.910,height*.780,61.6,61.6),jump:item(width*.810,height*.840,52,52),
       pickup:item(width*.855,height*.559,50,50),sprint:item(width*.926,height*.538,50,50),
       skill:item(Math.min(width*.802,width*.855-55),height*.667,44,44),
       swap:item(Math.max(width*.585,gunX+weapon/2+30),bottom,44,44),
@@ -77,7 +88,11 @@ export function resolveWidget(item, width, height, safe = {}) {
 
 export function createHudLayout({ store, resetInput, getPhase }) {
   const $=id=>document.getElementById(id), hud=$('hud'), editor=$('hud-editor'), select=$('hud-widget-select');
-  let saved; try { saved=JSON.parse(store.get(HUD_STORAGE,'{}')); } catch {}
+  let saved; try {
+    const current=store.get(HUD_STORAGE,'');
+    if(current)saved=JSON.parse(current);
+    else{saved=JSON.parse(store.get('chibi-hud-user-v6','{}'));for(const id of ['fire','sprint','skill','jump','pickup','swap','reload'])if(saved?.landscape)delete saved.landscape[id];}
+  } catch {}
   let layouts=cleanLayouts(saved), before=null, editing=false, selected='health', drag=null;
   const widgets=new Map([...document.querySelectorAll('[data-hud]')].map(el=>[el.dataset.hud,el]));
   const handles=new Map();
@@ -108,6 +123,7 @@ export function createHudLayout({ store, resetInput, getPhase }) {
   };
   select.onchange=()=>choose(select.value);
   for(const name of ['x','y','scale','opacity'])$(`hud-${name}`).oninput=event=>change({[name]:Number(event.target.value)/100});
+  $('hud-export').onclick=()=>{const g=current(),data={mode:g.mode,widgets:{}};for(const id of Object.keys(HUD_LABELS)){const c=item(id,g);data.widgets[id]={x:c.x,y:c.y,scale:c.scale,opacity:c.opacity};}const output=$('hud-export-data');output.hidden=false;output.value=JSON.stringify(data,null,2);output.focus();output.select();};
   $('hud-save').onclick=()=>finish(true);$('hud-cancel').onclick=()=>finish(false);
   $('hud-reset').onclick=()=>{layouts[current().mode]={};apply();};
   $('hud-collapse').onclick=()=>{const collapsed=$('hud-editor-panel').classList.toggle('collapsed');$('hud-collapse').textContent=collapsed?'Mở chỉnh sửa':'Thu gọn';};

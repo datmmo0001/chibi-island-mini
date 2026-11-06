@@ -36,7 +36,49 @@ export function avatar(outfitId = 'bear', hat = 'ears') {
   cylinder(.13, .13, .28, '#f8d275', gun, 0, .23, .03, 10);
   const nozzle = cylinder(.09, .09, .21, '#f39270', gun, 0, 0, .48, 10); nozzle.rotation.x = Math.PI / 2;
   const pack = sphere(.36, outfit.accent, g, 0, 1.04, -.38); pack.scale.set(1, 1.1, .4);
-  if (hat === 'ears') {
+  if(outfit.anime){
+    head.material=mat(outfit.hair);body.scale.set(.92,1.12,.78);belly.material=mat(outfit.light);
+    const details=new THREE.Group();details.name=`anime-${outfit.id}`;g.add(details);
+    // Smooth, layered locks frame the face while keeping the eyes visible.
+    for(let i=0;i<7;i++){const x=(i-3)*.17,lock=sphere(.24,outfit.hair,details,x,2.43-Math.abs(x)*.19,.48,12);lock.scale.set(.72,1.2,.7);lock.rotation.z=(i-3)*.13;}
+    for(const sign of [-1,1]){
+      const lock=sphere(.26,outfit.hair,details,sign*.61,1.97,.1,12);lock.scale.set(.55,1.65,.8);
+      const iris=sphere(.09,outfit.eye,details,sign*.21,1.99,.724,12);iris.scale.set(.8,1.25,.3);
+      sphere(.028,'#ffffff',details,sign*.21-.025,2.025,.754,8);
+      box(.17,.05,.04,outfit.hair,details,sign*.21,2.105,.7);
+      sphere(.075,'#fff4dc',details,sign*.59,1.79,.13,8);
+    }
+    box(.79,.09,.66,outfit.accent,details,0,.76,0);
+    const collar=box(.59,.17,.13,outfit.light,details,0,1.36,.33);collar.rotation.z=.02;
+    sphere(.07,'#ffe6a2',details,0,1.14,.45,8);
+    if(outfit.id==='akari'){
+      for(const sign of [-1,1]){const tail=sphere(.43,outfit.hair,details,sign*.86,1.9,-.12);tail.scale.set(.7,1.5,.75);tail.rotation.z=sign*-.2;
+        const bow=box(.24,.21,.17,outfit.accent,details,sign*.75,2.3,.03);bow.rotation.z=sign*.4;
+        for(let j=0;j<3;j++){const petal=sphere(.09,'#ffe5f0',details,sign*.68+Math.cos(j*2.1)*.07,2.36+Math.sin(j*2.1)*.07,.25,8);petal.scale.z=.4;}}
+      const skirt=cylinder(.38,.61,.32,outfit.color,details,0,.69,0,12);box(.1,.3,.1,outfit.accent,details,0,1.16,.47);
+    }else if(outfit.id==='ren'){
+      for(let i=0;i<5;i++){const spike=mesh(new THREE.ConeGeometry(.18,.46,5),outfit.hair,details,(i-2)*.2,2.64-Math.abs(i-2)*.04,-.05);spike.rotation.z=(i-2)*-.16;}
+      box(1.22,.14,.19,outfit.accent,details,0,2.29,.53);box(.27,.13,.04,'#cbdfe7',details,0,2.29,.65);
+      const scarf=cylinder(.32,.36,.19,outfit.accent,details,0,1.4,0,12);
+      for(const sign of [-1,1]){const ribbon=box(.15,.57,.05,outfit.accent,details,sign*.17,1.1,-.54);ribbon.rotation.z=sign*.32;}
+    }else if(outfit.id==='aoi'){
+      for(const sign of [-1,1]){const braid=sphere(.22,outfit.hair,details,sign*.57,1.65,-.06);braid.scale.set(.65,1.8,.7);}
+      const cape=mesh(new THREE.ConeGeometry(.63,.95,12,1,true),outfit.color,details,0,1.04,-.17);cape.scale.z=.72;
+      const brim=cylinder(.91,.91,.09,outfit.accent,details,0,2.5,0,18);
+      const hatTop=mesh(new THREE.ConeGeometry(.61,1.05,14),outfit.color,details,.08,2.99,0);hatTop.rotation.z=-.15;
+      const star=mesh(new THREE.OctahedronGeometry(.14), '#ffe8a3',details,.1,2.82,.49);star.scale.z=.3;
+    }else{
+      for(const sign of [-1,1]){const tuft=sphere(.25,outfit.hair,details,sign*.54,2.42,-.08);tuft.scale.set(1.35,.55,.8);tuft.rotation.z=sign*.3;}
+      const jacket=box(.14,.53,.12,outfit.accent,details,-.24,1.02,.4);
+      box(.09,.59,.12,outfit.light,details,.21,1.02,.4);
+      const goggles=cylinder(.12,.12,.07,outfit.accent,details,-.21,2.47,.57,12);goggles.rotation.x=Math.PI/2;
+      const glass=cylinder(.12,.12,.07,outfit.accent,details,.21,2.47,.57,12);glass.rotation.x=Math.PI/2;
+      box(.22,.04,.05,'#e7d9a6',details,0,2.47,.59);
+      pack.material=mat('#679f91');
+    }
+    if(hat==='cap'){const clip=sphere(.1,'#ffe8a3',details,.58,2.36,.3);clip.scale.z=.3;}
+    if(hat==='leaf'){const pin=sphere(.17,'#81bd86',details,-.59,2.3,.34);pin.scale.set(.5,1,.25);pin.rotation.z=.5;}
+  }else if (hat === 'ears') {
     if (outfit.id === 'bunny') {
       for (const sign of [-1, 1]) {
         const ear = sphere(.23, outfit.color, g, sign * .36, 2.75, -.05); ear.scale.set(.75, 2.5, .7); ear.rotation.z = sign * -.13;
@@ -256,7 +298,7 @@ export class IslandScene {
       if((p.shots||0)>(a.userData.shots||0))a.userData.flashUntil=this.clock+.08;
       a.userData.shots=p.shots||0;a.userData.hp=p.hp;a.userData.target=p;
       const w=p.inventory?.[p.slot||0];a.userData.gun.visible=!!w;a.userData.scope.visible=!!p.scope;
-      a.userData.aura.visible=!!p.effect;a.userData.wings.visible=p.effect==='flight';a.userData.halo.material.color.set(SKILLS[p.effect]?.color||'#89ffb4');
+      a.userData.aura.visible=!!p.effect||!!p.team;a.userData.wings.visible=p.effect==='flight';a.userData.halo.material.color.set(SKILLS[p.effect]?.color||(p.team===1?'#58caff':p.team===2?'#ff9c59':'#89ffb4'));
       if(w){a.userData.gun.scale.set(w.id==='candy'?1.3:1,1,w.id==='bubble'?1.4:1);a.userData.gun.children[0].material=mat(WEAPONS[w.id].color);}
       if(!p.alive&&a.userData.deadAt===null){a.userData.deadAt=this.clock;const effect=new THREE.Group();a.add(effect);a.userData.deathVisual=effect;const balloon=sphere(.6,'#ef9cb8',effect,0,3.4,0);balloon.scale.y=1.25;cylinder(.012,.012,1.2,'#ffe9cc',effect,0,2.8,0,5);}
     }
@@ -294,7 +336,7 @@ export class IslandScene {
     if(this.state?.phase==='playing'&&me?.alive&&this.localInput.fire&&gun&&me.reload<=0&&(!this.map.survival||gun.mag>0)&&t>=this.nextLocalShot){
       this.nextLocalShot=t+WEAPONS[gun.id].interval;const model=this.actors.get(this.selfId);if(model)model.userData.flashUntil=t+.07;this.onLocalShot?.(gun.id);
     }
-    for(const[id,a]of this.actors){const p=a.userData.target;if(!p)continue;const dying=a.userData.deadAt!==null,age=dying?t-a.userData.deadAt:0;a.visible=age<3&&!(id===this.selfId&&this.scoped)&&!(p.concealed&&id!==this.selfId&&me&&Math.hypot(p.x-me.x,p.z-me.z)>5);
+    for(const[id,a]of this.actors){const p=a.userData.target;if(!p)continue;const dying=a.userData.deadAt!==null,age=dying?t-a.userData.deadAt:0;a.visible=age<3&&!(id===this.selfId&&this.scoped)&&!(p.concealed&&id!==this.selfId&&me&&(!this.state.teamSize||p.team!==me.team)&&Math.hypot(p.x-me.x,p.z-me.z)>5);
       a.userData.halo.rotation.z=t*2;a.userData.wings.rotation.z=Math.sin(t*9)*.12;
       const local=id===this.selfId&&p.alive,follow=local?36:22;
       a.position.x=THREE.MathUtils.damp(a.position.x,p.x,follow,dt);a.position.z=THREE.MathUtils.damp(a.position.z,p.z,follow,dt);

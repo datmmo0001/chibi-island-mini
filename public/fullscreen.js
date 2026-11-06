@@ -1,19 +1,35 @@
-// Fullscreen belongs to the page, not a match or menu. Only the toggle asks to
-// leave; browser/system exits are reflected in the UI without re-entering.
-export function createFullscreen({ button, notify, resetInput, doc = document }) {
+// Fullscreen and orientation are requested from a user gesture only.
+export function createFullscreen({ button, buttons = [], notify, resetInput, doc = document,
+  orientation = globalThis.screen?.orientation,
+  isPhone = () => globalThis.matchMedia?.('(pointer: coarse)').matches === true }) {
+  const controls = [button, ...buttons].filter(Boolean);
   let pending = false;
   const active = () => Boolean(doc.fullscreenElement || doc.webkitFullscreenElement);
   function sync() {
-    const on = active(), supported = Boolean(doc.documentElement.requestFullscreen || doc.documentElement.webkitRequestFullscreen);
-    button.setAttribute('aria-pressed', String(on));
-    button.setAttribute('aria-label', on ? 'Thoát toàn màn hình' : 'Toàn màn hình');
-    button.title = on ? 'Thoát toàn màn hình' : supported ? 'Toàn màn hình' : 'Trình duyệt chưa hỗ trợ toàn màn hình';
-    button.disabled = pending;
+    const on = active();
+    for (const control of controls) {
+      control.setAttribute('aria-pressed', String(on));
+      const label = on ? 'Thoát toàn màn hình' : 'Toàn màn hình';
+      control.setAttribute('aria-label', label);
+      control.title = label;
+      control.disabled = pending;
+      if (control.dataset?.fullscreenText !== undefined) control.textContent = on ? '⛶ Thoát toàn màn hình' : '⛶ Toàn màn hình · Xoay ngang';
+    }
     doc.body.classList.toggle('fullscreen-active', on);
+  }
+  function report(message) { notify(message); const status=doc.getElementById?.('rotate-status'); if(status) status.textContent=message; }
+  async function landscape() {
+    if (!isPhone()) return;
+    try {
+      if (!orientation?.lock) throw new Error('unsupported');
+      await orientation.lock('landscape');
+    } catch {
+      report('Đã bật toàn màn hình. Trình duyệt chưa khóa ngang được; hãy xoay điện thoại sang ngang để chơi.');
+    }
   }
   async function toggle() {
     if (pending) return;
-    pending = true; resetInput(); sync();
+    pending = true; const status=doc.getElementById?.('rotate-status'); if(status) status.textContent=''; resetInput(); sync();
     try {
       if (active()) {
         const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
@@ -23,13 +39,17 @@ export function createFullscreen({ button, notify, resetInput, doc = document })
         const enter = doc.documentElement.requestFullscreen || doc.documentElement.webkitRequestFullscreen;
         if (!enter) throw new Error('unsupported');
         await enter.call(doc.documentElement, { navigationUI: 'hide' });
+        if (active()) await landscape();
       }
     } catch {
-      notify('Chưa bật được toàn màn hình. Hãy mở game trực tiếp trong Chrome hoặc Samsung Internet rồi thử lại.');
+      report('Chưa bật được toàn màn hình. Hãy mở trực tiếp bằng Chrome hoặc Samsung Internet, hoặc xoay máy sang ngang để tiếp tục.');
     } finally { pending = false; sync(); }
   }
-  button.addEventListener('click', toggle);
-  const changed = () => { resetInput(); sync(); };
+  for (const control of controls) control.addEventListener('click', toggle);
+  const changed = () => {
+    if (!active()) { try { orientation?.unlock?.(); } catch {} }
+    resetInput(); sync();
+  };
   doc.addEventListener('fullscreenchange', changed);
   doc.addEventListener('webkitfullscreenchange', changed);
   sync();

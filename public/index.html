@@ -16,38 +16,34 @@
   <div class="vignette"></div>
   <header id="header">
     <a class="brand" href="/" aria-label="Chibi Island trang chủ"><span class="brand-mark">✿</span><span>chibi<span class="brand-light">island</span><small>ĐẢO NHỎ, NIỀM VUI LỚN</small></span></a>
-    <div class="header-right"><span class="connection" id="connection"><i></i> Đang kết nối…</span><span class="build" id="build-label">0.4</span><button class="icon-button menu-open" data-dialog="guide-dialog" aria-label="Cách chơi" title="Cách chơi">?</button><button class="icon-button menu-open" data-dialog="settings-dialog" aria-label="Cài đặt" title="Cài đặt">⚙</button><button class="icon-button" id="sound" aria-label="Bật âm thanh" title="Bật/tắt âm thanh">♫</button></div>
+    <div class="header-right"><span class="connection" id="connection"><i></i> Đang kết nối…</span><button class="icon-button" id="home-fullscreen" aria-label="Toàn màn hình" title="Toàn màn hình">⛶</button><span class="build" id="build-label">0.4</span><button class="icon-button menu-open" data-dialog="guide-dialog" aria-label="Cách chơi" title="Cách chơi">?</button><button class="icon-button menu-open" data-dialog="settings-dialog" aria-label="Cài đặt" title="Cài đặt">⚙</button><button class="icon-button" id="music" aria-label="Tắt nhạc nền" title="Nhạc nền phòng chờ">♫</button><button class="icon-button" id="sound" aria-label="Bật âm thanh" title="Bật/tắt hiệu ứng">♪</button></div>
   </header>
 
   <main id="home">
     <section class="welcome">
-      <div class="eyebrow"><span class="spark">✦</span> HẸN NHAU TRÊN ĐẢO CHIBI</div>
-      <h1>Nhỏ xíu.<br>Vui <span>hết cỡ!</span><svg class="underline" viewBox="0 0 260 15" aria-hidden="true"><path d="M4 10 Q120 -2 254 6"/></svg></h1>
-      <p class="intro">Mặc đồ thật xinh, rủ hội bạn thân.<br>Một trận súng nước, cả đảo cười vui.</p>
-      <div class="mode-chips"><span><b>Góc nhìn thứ ba</b></span><span><b>1–3</b> bạn cùng chơi</span><span id="match-duration-tag"><b>10′</b> sinh tồn</span></div>
       <div class="play-card">
-        <div class="section-heading"><h2>Sẵn sàng lên đảo?</h2><span>01 / CHỌN NHÂN VẬT</span></div>
+        <div class="section-heading"><h2>Sẵn sàng lên đảo?</h2><small id="match-duration-tag"></small><span>01 / CHỌN NHÂN VẬT</span></div>
         <label class="field-label" for="map-select">Bản đồ & chế độ</label>
         <select id="map-select"><option value="frontier">MỚI · Đảo Rừng Gió · Sinh tồn · Diện tích 40×</option><option value="meadow">Đảo Cỏ Xanh · Sinh tồn · Diện tích 20×</option><option value="candy">Đảo Kẹo · Đấu trường nhanh</option></select>
-        <label class="field-label" for="room-size">Số người chơi</label><select id="room-size"><option value="3">Phòng tối đa 3 người</option><option value="5">Phòng tối đa 5 người</option><option value="20">Phòng tối đa 20 người · Rừng Gió</option></select><label class="mode-option"><input type="checkbox" id="respawn-mode"> Đảo Kẹo: hồi sinh 3s · tính kill</label><details class="home-chat"><summary>Chat online</summary><div id="online-chat" aria-live="polite"></div><input id="chat-message" maxlength="160" placeholder="Nhắn với mọi người"><button type="button" id="chat-send">Gửi</button></details><label class="field-label" for="player-name">Tên của bạn</label>
+        <label class="field-label" for="room-size">Số người chơi</label><select id="room-size"><option value="3">Phòng tối đa 3 người</option><option value="5">Phòng tối đa 5 người</option><option value="team2">Tổ đội 2 vs 2</option><option value="team3">Tổ đội 3 vs 3</option><option value="team4">Tổ đội 4 vs 4</option><option value="team5">Tổ đội 5 vs 5</option><option value="20">Phòng tối đa 20 người · Rừng Gió</option></select><label class="mode-option"><input type="checkbox" id="respawn-mode"> Đảo Kẹo: hồi sinh 3s · tính kill</label><button class="secondary home-chat-icon" data-dialog="chat-dialog" aria-label="Chat online">☏ Chat</button><label class="field-label" for="player-name">Tên của bạn</label>
         <input id="player-name" maxlength="18" placeholder="Đặt một cái tên dễ thương" autocomplete="nickname" value="">
-        <div class="outfit-list" id="outfits" role="group" aria-label="Chọn trang phục"></div>
-        <div class="hat-row"><span>Phụ kiện</span><div id="hats" role="group" aria-label="Chọn phụ kiện"></div></div>
-        <button class="primary" id="solo">Chơi ngay <span>→</span></button>
+<button class="secondary" data-dialog="appearance-dialog">♟ Trang phục</button>
+        <div class="home-actions"><button class="primary" id="solo">Chơi ngay <span>→</span></button>
         <button class="secondary full" id="create">Tạo phòng cùng bạn <span>↗</span></button>
-        <div class="join-divider"><span>đã có lời mời?</span></div>
+        </div><div class="join-divider"><span>đã có lời mời?</span></div>
         <form id="join-form" class="join-row"><label class="sr-only" for="room-code">Mã phòng</label><input id="room-code" placeholder="NHẬP MÃ PHÒNG" maxlength="6" autocomplete="off"><button class="secondary" type="submit">Vào phòng <span>→</span></button></form>
       </div>
-      <p class="home-note"><span>✧</span> Chơi ngay hoặc rủ bạn · Không cần tài khoản</p>
-      <button class="guide-link" data-dialog="guide-dialog">Lần đầu lên đảo? Xem cách chơi ↗</button>
-      <details class="game-info"><summary>Thông tin trò chơi</summary><p>Bạn có thể chơi riêng hoặc rủ bạn. Trận đấu có thể có đối thủ máy để bổ sung chỗ trống.</p></details>
     </section>
     <aside class="island-caption"><div class="floating-tag"><span>☀</span><span id="hero-map-name">ĐẢO CỎ XANH</span><i></i></div><h2 id="hero-map-heading">Đảo rộng hơn.<br>Phiêu lưu xa hơn.</h2><p id="preview-note">Nhảy qua bục · Nhặt súng · Chạy vào bo</p><span id="hero-map-subtitle" class="island-coordinate">DIỆN TÍCH 20× &nbsp; / &nbsp; GÓC NHÌN THỨ BA</span></aside>
     <footer class="home-footer"><span>Made for little adventures.</span><span><kbd>WASD</kbd> DI CHUYỂN <span class="footer-dot">·</span> BẤM VÀO CẢNH ĐỂ KHÓA CHUỘT</span></footer>
   </main>
 
+<dialog id="appearance-dialog" class="game-dialog"><button data-close-dialog class="dialog-close" aria-label="Đóng trang phục">×</button><h2>Trang phục của bạn</h2><a href="/characters.html" target="_blank" rel="noopener">Xem bộ sưu tập 3D ↗</a>        <div class="outfit-list" id="outfits" role="group" aria-label="Chọn trang phục"></div>
+        <div class="hat-row"><span>Phụ kiện</span><div id="hats" role="group" aria-label="Chọn phụ kiện"></div></div>
+<button class="secondary" data-close-dialog>Xong</button></dialog>
+<dialog id="chat-dialog" class="game-dialog"><button data-close-dialog class="dialog-close" aria-label="Đóng chat">×</button><h2>Chat online</h2><div class="home-chat"><div id="online-chat" aria-live="polite"></div><input id="chat-message" maxlength="160" placeholder="Nhắn với mọi người"><button type="button" id="chat-send">Gửi</button></div></dialog>
   <section id="lobby" class="overlay-panel" hidden>
-    <div class="lobby-heading"><h1>Phòng chờ</h1><div class="lobby-icons"><button class="icon-button" data-dialog="room-details-dialog" aria-label="Thông tin phòng" title="Thông tin phòng">ⓘ</button><button class="icon-button" data-dialog="people-dialog" aria-label="Xem người chơi" title="Xem tất cả người chơi">♟</button><button class="icon-button" data-dialog="settings-dialog" aria-label="Cài đặt phòng chờ" title="Cài đặt">⚙</button></div></div>
+    <div class="lobby-heading"><h1>Phòng chờ</h1><div class="lobby-icons"><button id="lobby-music" class="icon-button" aria-label="Tắt nhạc nền" title="Nhạc nền phòng chờ">♫</button><button id="lobby-sound" class="icon-button" aria-label="Bật hiệu ứng âm thanh" title="Hiệu ứng âm thanh">♪</button><button class="icon-button" id="lobby-fullscreen" aria-label="Toàn màn hình" title="Toàn màn hình">⛶</button><button class="icon-button" data-dialog="room-details-dialog" aria-label="Thông tin phòng" title="Thông tin phòng">ⓘ</button><button class="icon-button" data-dialog="people-dialog" aria-label="Xem người chơi" title="Xem tất cả người chơi">♟</button><button class="icon-button" data-dialog="settings-dialog" aria-label="Cài đặt phòng chờ" title="Cài đặt">⚙</button></div></div>
     <div class="room-code-card"><div><span>MÃ PHÒNG</span><strong id="lobby-code">------</strong></div><button class="secondary" id="copy-invite" aria-label="Sao chép lời mời" title="Sao chép lời mời">⧉</button></div>
     <p id="lobby-mode-line"></p><p class="lobby-description" hidden>Mời thêm bạn hoặc bắt đầu ngay khi đã sẵn sàng.</p>
     <div id="player-slots"></div>
@@ -89,7 +85,7 @@
   </section>
 
   <button id="fullscreen-toggle" class="hud-widget fullscreen-button" data-hud="fullscreen" aria-label="Toàn màn hình" aria-pressed="false" title="Toàn màn hình"><svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h5V3m8 0v5h5M8 21v-5H3m18 0h-5v5"/></svg></button>
-  <section id="results" class="results-backdrop" hidden><div class="results-card"><div class="result-flower">✿</div><div class="eyebrow">MỘT TRẬN THẬT VUI!</div><h1 id="result-title">Đảo có quán quân!</h1><p id="winner-name"></p><div id="scoreboard"></div><button class="primary" id="rematch">Về phòng chờ ↗</button><button class="text-button" id="leave-results">Rời phòng</button></div></section>
+  <section id="results" class="results-backdrop" hidden><div class="results-card"><div class="results-scroll" tabindex="0" role="region" aria-label="Kết quả trận đấu"><div class="result-flower">✿</div><div class="eyebrow">MỘT TRẬN THẬT VUI!</div><h1 id="result-title">Đảo có quán quân!</h1><p id="winner-name"></p><div id="scoreboard"></div></div><div class="results-actions"><button class="primary" id="rematch">Về phòng chờ ↗</button><button class="text-button" id="leave-results">Rời phòng</button></div></div></section>
   <div id="damage-vignette" aria-hidden="true"></div>
   <dialog id="guide-dialog" class="game-dialog" aria-labelledby="guide-title">
     <button class="dialog-close" data-close-dialog aria-label="Đóng cách chơi">×</button><div class="eyebrow">✦ HÀNH TRANG LÊN ĐẢO</div><h2 id="guide-title">Ba bước để giữ đảo.</h2>
@@ -104,9 +100,9 @@
     <label class="setting-field" for="quality-setting">Đồ họa<select id="quality-setting"><option value="auto">Tự chọn theo thiết bị</option><option value="low">Nhẹ máy · Tắt bóng đổ</option><option value="standard">Cân bằng</option><option value="high">Sắc nét</option></select></label>
     <label class="setting-field" for="sensitivity-setting">Độ nhạy xoay camera <output id="sensitivity-value">1.0×</output><input id="sensitivity-setting" type="range" min="0.5" max="2" step="0.1" value="1"></label>
     <label class="setting-check"><input id="invert-setting" type="checkbox">Đảo chiều nhìn lên / xuống</label>
-    <label class="setting-check"><input id="sound-setting" type="checkbox">Bật âm thanh</label>
+    <label class="setting-check"><input id="music-setting" type="checkbox">Nhạc nền phòng chờ</label><label class="setting-check"><input id="sound-setting" type="checkbox">Hiệu ứng và giọng báo kill</label>
     <label class="setting-field" for="volume-setting">Âm lượng <output id="volume-value">70%</output><input id="volume-setting" type="range" min="0" max="100" step="5" value="70"></label>
-    <button id="edit-hud" class="secondary full">Chỉnh bố cục UI · Kéo, đổi cỡ, độ mờ ↗</button><p class="dialog-note hud-settings-note">Xem trước các nút ngay cả khi chưa vào trận. Lưu bố cục ngang trên thiết bị này. Điện thoại cần xoay ngang.</p>
+    <p id="audio-status" role="status">Bật âm thanh hoặc bấm nghe thử để phát nhạc.</p><div class="audio-preview"><span>Nghe thử âm thanh</span><button type="button" data-audio="heal">Hồi máu</button><button type="button" data-audio="defeat">Bị hạ</button><button type="button" data-audio="skill">Kỹ năng</button><button type="button" data-audio="kill-1">1 kill</button><button type="button" data-audio="kill-2">2 kill</button><button type="button" data-audio="kill-3">3 kill</button><button type="button" data-audio="kill-4">4 kill</button><button type="button" data-audio="pentakill">Pentakill</button></div><button id="edit-hud" class="secondary full">Chỉnh bố cục UI · Kéo, đổi cỡ, độ mờ ↗</button><p class="dialog-note hud-settings-note">Xem trước các nút ngay cả khi chưa vào trận. Lưu bố cục ngang trên thiết bị này. Điện thoại cần xoay ngang.</p>
     <p class="dialog-note">Tùy chỉnh được lưu trên thiết bị này. Chọn “Nhẹ máy” nếu hình ảnh bị giật hoặc máy nóng.</p><p class="live-match-note" hidden>Trận vẫn tiếp diễn khi mở hướng dẫn hoặc cài đặt.</p><button class="primary" data-close-dialog>Xong · Quay lại</button>
   </dialog>
   <div id="hud-safe" aria-hidden="true"></div>
@@ -120,7 +116,7 @@
           <label class="setting-field" for="hud-y">Vị trí dọc <output id="hud-y-value"></output><input id="hud-y" type="range" min="0" max="100" step="1"></label>
           <label class="setting-field" for="hud-scale">Kích thước <output id="hud-scale-value"></output><input id="hud-scale" type="range" min="60" max="150" step="5"></label>
           <label class="setting-field" for="hud-opacity">Độ rõ <output id="hud-opacity-value"></output><input id="hud-opacity" type="range" min="25" max="100" step="5"></label>
-        </div><div class="hud-editor-buttons"><button id="hud-reset">Mặc định</button><button id="hud-cancel">Hủy</button><button id="hud-save">Lưu UI</button></div>
+        </div><div class="hud-editor-buttons"><button id="hud-reset">Mặc định</button><button id="hud-cancel">Hủy</button><button id="hud-save">Lưu UI</button><button id="hud-export">Xuất bố cục</button></div><textarea id="hud-export-data" aria-label="Bố cục UI đã xuất" readonly hidden></textarea>
       </div>
     </div>
   </section>
@@ -129,8 +125,8 @@
   <div id="fatal" hidden><div><h2>Chưa mở được đảo 3D</h2><p id="fatal-message"></p><button class="primary" onclick="location.reload()">Thử lại</button></div></div>
   <section id="mouse-gate" hidden><div class="mouse-gate-card"><h2>Khóa chuột để vào trận</h2><p id="mouse-lock-status">Rê chuột để điều khiển tâm ngắm. Bấm nút bên dưới để bắt đầu.</p><button id="capture-mouse" class="primary">Vào trận · Khóa chuột</button><small>Esc mở con trỏ · Tab cài đặt. Trận vẫn tiếp diễn.</small></div></section>
   <dialog id="room-details-dialog" class="game-dialog" aria-labelledby="room-details-title"><button class="dialog-close" data-close-dialog aria-label="Đóng thông tin phòng">×</button><h2 id="room-details-title">Thông tin phòng</h2><dl class="room-facts"><dt>Bản đồ</dt><dd id="detail-map"></dd><dt>Số chỗ</dt><dd id="detail-capacity"></dd><dt>Chế độ</dt><dd id="detail-mode"></dd><dt>Thời gian</dt><dd id="detail-duration"></dd></dl><p class="dialog-note">Gửi mã phòng hoặc lời mời cho bạn bè. Mọi người vào phòng và bấm sẵn sàng, rồi chủ phòng bắt đầu.</p><button class="primary" data-close-dialog>Đóng</button></dialog>
-  <dialog id="people-dialog" class="game-dialog" aria-labelledby="people-title"><button class="dialog-close" data-close-dialog aria-label="Đóng danh sách người chơi">×</button><h2 id="people-title">Người chơi trong phòng</h2><ul id="people-details" class="people-details"></ul><button class="primary" data-close-dialog>Đóng</button></dialog>
+  <dialog id="people-dialog" class="game-dialog" aria-labelledby="people-title"><button class="dialog-close" data-close-dialog aria-label="Đóng danh sách người chơi">×</button><h2 id="people-title">Người chơi trong phòng</h2><div id="team-choice" hidden><label for="team-select">Đội của bạn</label><select id="team-select"><option value="1">Đội Xanh</option><option value="2">Đội Cam</option></select><p>Mỗi đội có số chỗ bằng nhau. Đổi đội sẽ hủy sẵn sàng. Bắn không gây sát thương đồng đội.</p></div><ul id="people-details" class="people-details"></ul><button class="primary" data-close-dialog>Đóng</button></dialog>
   <script type="module" src="/client.js"></script></div>
-  <section id="rotate-gate" role="dialog" aria-modal="true" aria-labelledby="rotate-title" hidden><div><svg class="rotate-phone" viewBox="0 0 120 120" aria-hidden="true"><rect x="36" y="22" width="48" height="76" rx="8" transform="rotate(90 60 60)"/><path d="M16 55a45 45 0 0 1 70-30m0-11v13H73M104 65a45 45 0 0 1-70 30m0 11V93h13"/></svg><h2 id="rotate-title" tabindex="-1">Xoay ngang để lên đảo</h2><p>Game chỉ hỗ trợ màn hình ngang trên điện thoại. Xoay máy để tiếp tục nhé.</p></div></section>
+  <section id="rotate-gate" role="dialog" aria-modal="true" aria-labelledby="rotate-title" hidden><div><svg class="rotate-phone" viewBox="0 0 120 120" aria-hidden="true"><rect x="36" y="22" width="48" height="76" rx="8" transform="rotate(90 60 60)"/><path d="M16 55a45 45 0 0 1 70-30m0-11v13H73M104 65a45 45 0 0 1-70 30m0 11V93h13"/></svg><h2 id="rotate-title" tabindex="-1">Xoay ngang để lên đảo</h2><p>Game chỉ hỗ trợ màn hình ngang trên điện thoại. Xoay máy để tiếp tục nhé.</p><button class="primary" id="rotate-fullscreen" data-fullscreen-text>⛶ Toàn màn hình · Xoay ngang</button><p id="rotate-status" role="status"></p><p class="rotate-help">Nếu máy không tự xoay, hãy xoay ngang thủ công. Bạn vẫn có thể thoát bằng nút hệ thống.</p></div></section>
 </body>
 </html>

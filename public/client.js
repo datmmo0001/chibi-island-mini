@@ -1,3 +1,4 @@
+import { createGameAudio } from './game-audio.js';
 import { IslandScene } from './scene.js';
 import { createMenus } from './menus.js';
 import { createPlayGuard } from './play-guard.js';
@@ -23,7 +24,8 @@ $('map-select').value = selectedMap;
 function selectMap() {
   selectedMap = getMap($('map-select').value).id; activeMap = getMap(selectedMap); safeStore.set('chibi-map', selectedMap); world.changeMap(selectedMap);
   $('match-duration-tag').innerHTML = activeMap.survival ? '<b>10′</b> sinh tồn' : '<b>3′</b> đấu trường';
-  $('room-size').querySelector('[value="20"]').disabled=selectedMap!=='frontier';if(selectedMap!=='frontier'&&$('room-size').value==='20')$('room-size').value='3';$('respawn-mode').disabled=selectedMap!=='candy';document.querySelector('.mode-chips span:nth-child(2) b').textContent=`1–${$('room-size').value}`;
+  $('room-size').querySelector('[value="20"]').disabled=selectedMap!=='frontier';if(selectedMap!=='frontier'&&$('room-size').value==='20')$('room-size').value='3';$('respawn-mode').disabled=selectedMap!=='candy';
+  $('solo').firstChild.textContent=$('room-size').value.startsWith('team')?'Vào tổ đội ':'Chơi ngay ';
   $('hero-map-name').textContent = activeMap.name.toLocaleUpperCase('vi');
   $('hero-map-heading').innerHTML = activeMap.survival ? 'Đảo rộng hơn.<br>Phiêu lưu xa hơn.' : 'Đảo nhỏ.<br>Niềm vui lớn.';
   $('hero-map-subtitle').textContent = activeMap.survival ? `DIỆN TÍCH ${activeMap.areaMultiplier}× / GÓC NHÌN THỨ BA` : 'ĐẤU TRƯỜNG NHANH / GÓC NHÌN THỨ BA';
@@ -35,9 +37,10 @@ if (!OUTFITS.some(o => o.id === outfit)) outfit = 'bear'; if (!HATS.includes(hat
 let ws, identity = null, state = null, retry = 0, retryTimer, toastTimer, pending = false, previewSignature = '', lastPhase = '', lastRound = 0, lastEvent = 0;
 let lastZoneKey = '';
 const keys = new Set(), pointer = { x: 0, y: 0, down: false, look: false }, touch = { x: 0, z: 0, fire: false, sprint: false };
+let gameAudio;
 const actions = { jump: false, interact: false, reload: false, swap: false, heal: false, skill: false };
 let mouseLock, playGuard, scoped=false;
-let audio = null, menus, soundEnabled = safeStore.get('chibi-sound', 'off') === 'on', latency = 0, resumed = false;
+let audio = null, menus, soundEnabled = safeStore.get('chibi-sound', 'off') === 'on', musicEnabled = safeStore.get('chibi-music','on')==='on', latency = 0, resumed = false;
 let lastHealth = null, damageTimer, firingTimer, feedSignature = '', compassAt = 0;
 $('player-name').value = safeStore.get('chibi-name');
 const invitedRoom = new URL(location.href).searchParams.get('room'); if (invitedRoom) $('room-code').value = invitedRoom.toUpperCase().slice(0, 6);
@@ -82,6 +85,9 @@ function connect() {
   ws.addEventListener('error', () => {});
 }
 function outfitSvg(o) {
+  if(o.anime){const accessory=o.id==='aoi'?`<path d="M10 22L35 0l20 22z" fill="${o.color}"/><path d="M6 23h58" stroke="${o.accent}" stroke-width="5"/>`:o.id==='ren'?`<path d="M13 22h44" stroke="${o.accent}" stroke-width="7"/>`:o.id==='akari'?`<ellipse cx="12" cy="39" rx="9" ry="20" fill="${o.hair}"/><ellipse cx="58" cy="39" rx="9" ry="20" fill="${o.hair}"/>`:`<path d="M16 22l7-12 12 8 9-10 10 16" fill="${o.hair}"/>`;
+    return `<svg viewBox="0 0 70 78" aria-hidden="true"><ellipse cx="35" cy="74" rx="23" ry="3" fill="#315c4620"/><path d="M19 72V48h32v24" fill="${o.color}"/><path d="M25 49l10 12 10-12" fill="${o.light}"/><circle cx="35" cy="30" r="23" fill="${o.hair}"/><ellipse cx="35" cy="33" rx="19" ry="19" fill="#ffdfbd"/>${accessory}<path d="M17 25l6-13 10 13 8-15 13 15" fill="${o.hair}"/><ellipse cx="28" cy="34" rx="3" ry="5" fill="${o.eye}"/><ellipse cx="43" cy="34" rx="3" ry="5" fill="${o.eye}"/><circle cx="27" cy="32" r="1.3" fill="white"/><circle cx="42" cy="32" r="1.3" fill="white"/><path d="M32 43q3 3 6 0" fill="none" stroke="#aa6871"/><path d="M31 52h8l-4 13z" fill="${o.accent}"/></svg>`;
+  }
   const ears = o.id === 'bunny' ? '<ellipse cx="24" cy="13" rx="5" ry="12"/><ellipse cx="45" cy="13" rx="5" ry="12"/>' : '<circle cx="17" cy="21" r="8"/><circle cx="52" cy="21" r="8"/>';
   return `<svg viewBox="0 0 70 78" aria-hidden="true"><ellipse cx="35" cy="73" rx="23" ry="3" fill="#75876a" opacity=".12"/><g fill="${o.color}">${ears}<ellipse cx="35" cy="54" rx="17" ry="19"/><ellipse cx="35" cy="32" rx="24" ry="22"/></g><ellipse cx="35" cy="35" rx="19" ry="15" fill="#ffdfbd"/><circle cx="28" cy="34" r="2" fill="#3d4740"/><circle cx="43" cy="34" r="2" fill="#3d4740"/><path d="M32 41q3 3 6 0" fill="none" stroke="#9d6b54" stroke-width="1.3"/><ellipse cx="35" cy="59" rx="10" ry="11" fill="${o.light}"/><ellipse cx="25" cy="72" rx="8" ry="4" fill="${o.accent}"/><ellipse cx="45" cy="72" rx="8" ry="4" fill="${o.accent}"/>${o.id === 'duck' ? '<ellipse cx="35" cy="19" rx="22" ry="5" fill="#edb845"/>' : ''}</svg>`;
 }
@@ -98,7 +104,8 @@ function enter(type) {
   if (pending) return;
   const name = $('player-name').value.trim(); if (!name) { toast('Đặt tên trước khi lên đảo nhé.'); $('player-name').focus(); return; }
   const code = $('room-code').value.toUpperCase().trim(); if (type === 'join' && code.length !== 6) { toast('Mã phòng có 6 ký tự.'); $('room-code').focus(); return; }
-  initAudio(); setPending(send({ type, name, code, outfit, hat, mapId: selectedMap,capacity:Number($('room-size').value),respawn:$('respawn-mode').checked }));
+  if(type==='solo'&&$('room-size').value.startsWith('team'))type='create';
+  initAudio(); setPending(send({ type, name, code, outfit, hat, mapId: selectedMap,capacity:Number($('room-size').value),teamSize:$('room-size').value.startsWith('team')?Number($('room-size').value.slice(4)):0,respawn:$('respawn-mode').checked }));
 }
 $('solo').onclick = () => enter('solo');
 $('create').onclick = () => enter('create'); $('join-form').onsubmit = event => { event.preventDefault(); enter('join'); };
@@ -114,21 +121,22 @@ $('copy-invite').onclick = async () => {
 function renderLobby(data) {
   activeMap = getMap(data.mapId); $('lobby').querySelector('.lobby-description').textContent = `${activeMap.name} · Mời thêm bạn hoặc bắt đầu ngay khi đã sẵn sàng.`;
   document.querySelector('.bot-note small').textContent=`Mỗi trận có ${data.capacity===20?20:8} nhân vật cùng tranh tài`;
-  $('lobby-mode-line').textContent=`${activeMap.name} · ${data.capacity||3} chỗ · ${data.respawn?'Hồi sinh / tính kill':activeMap.survival?'Sinh tồn':'Đấu trường'}`;
-  $('detail-map').textContent=activeMap.name;$('detail-capacity').textContent=`Tối đa ${data.capacity||3} người thật`;$('detail-mode').textContent=data.respawn?'Hồi sinh sau 3s · Tính kill':activeMap.survival?'Sinh tồn':'Đấu trường';$('detail-duration').textContent=`Tối đa ${Math.round(activeMap.duration/60)} phút`;
+  $('lobby-mode-line').textContent=`${data.teamSize?`${data.teamSize} vs ${data.teamSize} · ♟ Chọn đội · `:''}${activeMap.name} · ${data.capacity||3} chỗ · ${data.respawn?'Hồi sinh / tính kill':activeMap.survival?'Sinh tồn':'Đấu trường'}`;
+  $('detail-map').textContent=activeMap.name;$('detail-capacity').textContent=`Tối đa ${data.capacity||3} người thật`;$('detail-mode').textContent=data.teamSize?`Tổ đội ${data.teamSize} vs ${data.teamSize}`:data.respawn?'Hồi sinh sau 3s · Tính kill':activeMap.survival?'Sinh tồn':'Đấu trường';$('detail-duration').textContent=`Tối đa ${Math.round(activeMap.duration/60)} phút`;
   const humans = data.players.filter(p => !p.bot), me = humans.find(p => p.id === identity);
+  $('team-choice').hidden=!data.teamSize;if(data.teamSize)$('team-select').value=String(me?.team||1);
   $('lobby-code').textContent = data.code; $('lobby-count').textContent = `${humans.length}/${data.capacity||3} bạn đã vào phòng`;
-  $('player-slots').replaceChildren(...Array.from({ length: Math.min(8,data.capacity||3,humans.length+1) }, (_, i) => {
-    const p = humans[i], row = document.createElement('div'); row.className = 'player-slot' + (!p ? ' empty' : '');
-    const icon = document.createElement('div'); icon.className = 'player-avatar'; icon.textContent = p ? ({ bear: '🐻', bunny: '🐰', duck: '🐤' }[p.outfit]) : '+';
+  $('player-slots').replaceChildren(...Array.from({ length: Math.min(data.teamSize?10:8,data.capacity||3,humans.length+1) }, (_, i) => {
+    const p = humans[i], row = document.createElement('div'); row.className = 'player-slot' + (!p ? ' empty' : '');if(p?.team)row.dataset.team=p.team;
+    const icon = document.createElement('div'); icon.className = 'player-avatar'; if(p){icon.innerHTML=outfitSvg(OUTFITS.find(o=>o.id===p.outfit)||OUTFITS[0]);icon.setAttribute('aria-label',`Nhân vật của ${p.name}`);}else icon.textContent='+';
     const details = document.createElement('div'); details.className = 'player-details'; const title = document.createElement('b'), sub = document.createElement('small');
-    title.textContent = p ? p.name + (p.id === identity ? ' · Bạn' : '') : 'Chờ một người bạn…';
+    title.textContent = p ? p.name + (p.team?` · ${p.team===1?'Xanh':'Cam'}`:'') + (p.id === identity ? ' · Bạn' : '') : 'Chờ một người bạn…';
     sub.textContent = p ? (p.id === data.hostId ? 'Chủ phòng' : 'Đã lên đảo') : 'Gửi mã phòng để rủ bạn vào'; details.append(title, sub);
     row.append(icon, details);
     if (p) { const status = document.createElement('span'); status.className = 'player-ready' + (p.ready ? ' yes' : ''); status.textContent = p.ready ? '✓ Sẵn sàng' : 'Đang chuẩn bị'; row.append(status); }
     return row;
   }));
-  $('people-details').replaceChildren(...humans.map(p=>{const li=document.createElement('li');li.textContent=`${p.name}${p.id===data.hostId?' · Chủ phòng':''} · ${p.ready?'Sẵn sàng':'Đang chuẩn bị'}`;return li;}));
+  $('people-details').replaceChildren(...humans.map(p=>{const li=document.createElement('li');li.textContent=`${p.name}${p.team?` · Đội ${p.team===1?'Xanh':'Cam'}`:''}${p.id===data.hostId?' · Chủ phòng':''} · ${p.ready?'Sẵn sàng':'Đang chuẩn bị'}`;return li;}));
   $('ready').textContent = me?.ready ? '✓ Đã sẵn sàng · Bấm để hủy' : 'Mình sẵn sàng! ✓';
   const canStart = humans.length > 0 && humans.every(p => p.ready && p.connected), isHost = data.hostId === identity;
   $('start').disabled = !isHost || !canStart;
@@ -139,6 +147,7 @@ function renderLobby(data) {
 function renderState(data) {
   activeMap = getMap(data.mapId);
   state = data; const phaseChanged = data.phase !== lastPhase || data.round !== lastRound;
+  gameAudio?.sync();
   if (data.round !== lastRound) { lastEvent = 0; lastZoneKey = ''; feedSignature = ''; }
   if (phaseChanged) { lastHealth = null; $('damage-vignette').classList.remove('visible'); }
   $('home').hidden = true; $('lobby').hidden = data.phase !== 'lobby'; $('hud').hidden = data.phase !== 'playing'; $('results').hidden = data.phase !== 'finished';
@@ -174,6 +183,7 @@ function renderState(data) {
     const recent = data.events.filter(e => e.type === 'out' || (e.type === 'marker' && data.time - e.at < RULES.markerLife)).slice(-4), signature = recent.map(e => e.id).join('/');
     if (signature !== feedSignature) { feedSignature = signature; $('feed').replaceChildren(...recent.map(e => { const line = document.createElement('div'); line.className = 'feed-line' + (e.type === 'marker' ? ' marker-line' : ''); line.textContent = (e.type === 'marker' ? '⌖ ' : '') + e.text; return line; })); }
     for (const e of data.events) if (e.id > lastEvent) {
+      if(data.time-(e.at||0)<2)gameAudio.event(e,identity);
       if(e.type==='out'){const killer=data.players.find(p=>p.id===e.attacker),victim=data.players.find(p=>p.id===e.player);$('kill-notice').textContent=killer?`${killer.name} ▸ ${victim?.name||''}`:`${victim?.name||''} bị loại`; }
       if (e.type === 'out') tone(380, .12, .025);
       if (e.type === 'pickup' && e.player === identity) toast(e.text);
@@ -193,13 +203,14 @@ function renderState(data) {
 }
 function renderResults(data) {
   const winner = data.winner;
-  $('result-title').textContent = winner?.id === identity ? 'Bạn là quán quân!' : winner ? 'Đảo có quán quân!' : 'Hòa cả làng!';
+  $('result-title').textContent = (winner?.team?data.players.find(p=>p.id===identity)?.team===winner.team:winner?.id === identity) ? 'Bạn là quán quân!' : winner ? 'Đảo có quán quân!' : 'Hòa cả làng!';
+  if(data.teamSize)$('result-title').textContent=winner?data.players.find(p=>p.id===identity)?.team===winner.team?'Đội bạn chiến thắng!':'Đảo có đội quán quân!':'Hai đội hòa nhau!';
   $('winner-name').textContent = winner ? `${winner.name} giữ đảo thành công ✦` : 'Hẹn nhau một trận nữa nhé.';
-  const sorted = [...data.players].sort((a, b) => Number(b.id === winner?.id) - Number(a.id === winner?.id) || Number(b.alive) - Number(a.alive) || b.kills - a.kills || b.hp - a.hp);
+  const sorted = [...data.players].sort((a, b) => Number(data.teamSize?b.team===winner?.team:b.id===winner?.id)-Number(data.teamSize?a.team===winner?.team:a.id===winner?.id) || Number(b.alive) - Number(a.alive) || b.kills - a.kills || b.hp - a.hp);
   $('scoreboard').replaceChildren(...sorted.map((p, i) => {
     const row = document.createElement('div'); row.className = 'score-row';
     const place = document.createElement('span'); place.className = 'score-place'; place.textContent = i === 0 && winner ? '✦' : String(i + 1);
-    const name = document.createElement('b'); name.textContent = p.name + (p.id === identity ? ' · Bạn' : '');
+    const name = document.createElement('b'); name.textContent = p.name + (p.team?` · Đội ${p.team===1?'Xanh':'Cam'}`:'') + (p.id === identity ? ' · Bạn' : '');
     const score = document.createElement('span'); score.textContent = `${p.kills} lần loại`; row.append(place, name, score); return row;
   }));
   const host = identity === data.hostId; $('rematch').disabled = !host; $('rematch').textContent = host ? (data.mode === 'solo' ? 'Chơi lại ngay ↗' : 'Về phòng chờ · Chơi tiếp ↗') : 'Chờ chủ phòng mở trận tiếp';
@@ -212,7 +223,7 @@ function drawMinimap(data) {
   ctx.fillStyle = '#375b35'; for (const o of activeMap.obstacles) { ctx.beginPath(); ctx.arc(o.x * scale, o.z * scale, Math.max(.6, o.r * scale), 0, Math.PI * 2); ctx.fill(); }
   ctx.strokeStyle = '#73def8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(zone.x * scale, zone.z * scale, data.radius * scale, 0, Math.PI * 2); ctx.stroke();
   ctx.save(); ctx.setLineDash([3,3]); ctx.strokeStyle = '#fffbd4'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(zone.nextX * scale, zone.nextZ * scale, zone.nextRadius * scale, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
-  for (const p of data.players) if (p.alive && (!p.concealed || p.id===identity)) { ctx.fillStyle = p.id === identity ? '#fffef0' : '#498b7b'; ctx.strokeStyle = p.id === identity ? '#386552' : '#fff4'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(p.x * scale, p.z * scale, p.id === identity ? 4 : 2.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  for (const p of data.players) if (p.alive && (!p.concealed || p.id===identity || (data.teamSize&&p.team===data.players.find(q=>q.id===identity)?.team))) { ctx.fillStyle = p.id === identity ? '#fffef0' : p.team===1?'#58caff':p.team===2?'#ff9c59':'#498b7b'; ctx.strokeStyle = p.id === identity ? '#386552' : '#fff4'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(p.x * scale, p.z * scale, p.id === identity ? 4 : 2.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   for (const m of data.markers || []) { ctx.strokeStyle = m.player === identity ? '#6ef8ff' : '#ffe282'; ctx.fillStyle = '#203d2b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(m.x * scale, m.z * scale, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   ctx.restore();
 }
@@ -252,15 +263,16 @@ function renderAbilities(me){
   if($('touch-scope').disabled)setScoped(false);
   document.querySelector('.health-symbol').textContent=me.concealed?'♣':'♥';document.querySelector('[data-hud=health]').title=me.concealed?'Đang ẩn trong lùm cây':'';
 }
-function initAudio() { if (!soundEnabled) return; try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume().catch(() => {}); } catch {} }
+function initAudio() { gameAudio?.unlock();if (!soundEnabled) return; try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume().catch(() => {}); } catch {} }
 function tone(frequency, duration, volume) {
   if (!soundEnabled || !audio || audio.state !== 'running') return;
   const level = volume * (menus?.volume() ?? .7); if (level <= 0) return;
   try { const osc = audio.createOscillator(), gain = audio.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(frequency, audio.currentTime); osc.frequency.exponentialRampToValueAtTime(frequency * .6, audio.currentTime + duration); gain.gain.setValueAtTime(level, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration); osc.connect(gain); gain.connect(audio.destination); osc.start(); osc.stop(audio.currentTime + duration); } catch {}
 }
-function toggleSound() { soundEnabled = !soundEnabled; safeStore.set('chibi-sound', soundEnabled ? 'on' : 'off'); updateSound(); initAudio(); if (soundEnabled) tone(660, .1, .04); }
-function updateSound() { $('sound').classList.toggle('active', soundEnabled); $('sound').setAttribute('aria-label', soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'); $('sound').setAttribute('aria-pressed', String(soundEnabled)); menus?.syncSound(); }
-$('sound').onclick = toggleSound;
+function toggleSound() { soundEnabled = !soundEnabled; safeStore.set('chibi-sound', soundEnabled ? 'on' : 'off'); updateSound(); initAudio();gameAudio.sync(); if (soundEnabled) tone(660, .1, .04); }
+function toggleMusic(){musicEnabled=!musicEnabled;safeStore.set('chibi-music',musicEnabled?'on':'off');gameAudio.unlock();updateSound();gameAudio.sync();}
+function updateSound() { $('music').classList.toggle('active',musicEnabled);$('music').setAttribute('aria-pressed',String(musicEnabled));$('music').setAttribute('aria-label',musicEnabled?'Tắt nhạc nền':'Bật nhạc nền');$('music-setting').checked=musicEnabled;for(const id of ['lobby-music']){$(id).classList.toggle('active',musicEnabled);$(id).setAttribute('aria-pressed',String(musicEnabled));$(id).setAttribute('aria-label',musicEnabled?'Tắt nhạc nền':'Bật nhạc nền');}for(const id of ['lobby-sound']){$(id).classList.toggle('active',soundEnabled);$(id).setAttribute('aria-pressed',String(soundEnabled));$(id).setAttribute('aria-label',soundEnabled?'Tắt hiệu ứng âm thanh':'Bật hiệu ứng âm thanh');} $('sound').classList.toggle('active', soundEnabled); $('sound').setAttribute('aria-label', soundEnabled ? 'Tắt hiệu ứng âm thanh' : 'Bật hiệu ứng âm thanh'); $('sound').setAttribute('aria-pressed', String(soundEnabled)); menus?.syncSound(); }
+$('lobby-sound').onclick=toggleSound;$('lobby-music').onclick=toggleMusic;$('sound').onclick = toggleSound;$('music').onclick=toggleMusic;$('music-setting').onchange=()=>{if($('music-setting').checked!==musicEnabled)toggleMusic();};
 addEventListener('keydown', event => {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement) return;
   if (menus?.isOpen()) return;
@@ -325,7 +337,7 @@ function flushInput(){
   if(!scoped&&(touch.fire||keys.has('KeyF'))){
     const forward={x:Math.sin(world.cameraYaw),z:Math.cos(world.cameraYaw)};
     const statuses=new Map((state.obstacles||[]).map(o=>[o.id,o]));
-    const target=state.players.filter(p=>{const dx=p.x-me.x,dz=p.z-me.z,d=Math.hypot(dx,dz);return p.alive&&p.id!==identity&&(!p.concealed||d<5)&&d<65&&(dx*forward.x+dz*forward.z)/Math.max(.01,d)>.48&&visible(me.x,me.z,p.x,p.z,activeMap,statuses,Math.min(me.y,p.y)+1.3);})
+    const target=state.players.filter(p=>{const dx=p.x-me.x,dz=p.z-me.z,d=Math.hypot(dx,dz);return p.alive&&p.id!==identity&&(!state.teamSize||p.team!==me.team)&&(!p.concealed||d<5)&&d<65&&(dx*forward.x+dz*forward.z)/Math.max(.01,d)>.48&&visible(me.x,me.z,p.x,p.z,activeMap,statuses,Math.min(me.y,p.y)+1.3);})
       .sort((a,b)=>Math.hypot(a.x-me.x,a.z-me.z)-Math.hypot(b.x-me.x,b.z-me.z))[0];
     if(target){const dx=target.x-me.x,dz=target.z-me.z;aim={aim:Math.atan2(dx,dz),pitch:Math.atan2(target.y-me.y,Math.hypot(dx,dz))};}
   }
@@ -335,11 +347,14 @@ function flushInput(){
 setInterval(flushInput,50);
 setInterval(()=>{if(ws?.readyState===WebSocket.OPEN)send({type:'ping',at:performance.now()});},2500);
 let previous = performance.now();
-function frame(now) { playGuard?.refresh();const dt = Math.min((now - previous) / 1000, .05); previous = now; world.frame(dt); if(state?.phase==='playing'&&now-compassAt>100){compassAt=now;const degrees=((Math.PI-world.cameraYaw)*180/Math.PI%360+360)%360;const names=['BẮC','ĐÔNG BẮC','ĐÔNG','ĐÔNG NAM','NAM','TÂY NAM','TÂY','TÂY BẮC'];$('compass-name').textContent=names[Math.round(degrees/45)%8];$('compass-degrees').textContent=`${String(Math.round(degrees)%360).padStart(3,'0')}°`;} requestAnimationFrame(frame); }
+function frame(now) { gameAudio?.sync();playGuard?.refresh();const dt = Math.min((now - previous) / 1000, .05); previous = now; world.frame(dt); if(state?.phase==='playing'&&now-compassAt>100){compassAt=now;const degrees=((Math.PI-world.cameraYaw)*180/Math.PI%360+360)%360;const names=['BẮC','ĐÔNG BẮC','ĐÔNG','ĐÔNG NAM','NAM','TÂY NAM','TÂY','TÂY BẮC'];$('compass-name').textContent=names[Math.round(degrees/45)%8];$('compass-degrees').textContent=`${String(Math.round(degrees)%360).padStart(3,'0')}°`;} requestAnimationFrame(frame); }
 mouseLock=createMouseLock({canvas:$('world'),isPlayable:()=>state?.phase==='playing'&&state.players.find(p=>p.id===identity)?.alive&&!menus?.isOpen()&&!playGuard?.isPortrait(),rotate:(dx,dy)=>world.rotateCamera(dx,dy),resetInput,notify:()=>{$('mouse-lock-status').textContent='Trình duyệt này chưa cho khóa chuột. Hãy mở game trực tiếp trong Chrome hoặc Edge, rồi bấm lại để vào trận.';}});
+gameAudio=createGameAudio({enabled:()=>soundEnabled,musicEnabled:()=>musicEnabled,phase:()=>state?.phase,volume:()=>menus?.volume()??.7});
+$('team-select').onchange=()=>send({type:'configure',team:Number($('team-select').value)});
+for(const b of document.querySelectorAll('[data-audio]'))b.onclick=()=>{if(!soundEnabled)toggleSound();gameAudio.preview(b.dataset.audio);};
 menus=createMenus({world,store:safeStore,resetInput:()=>{mouseLock.release();resetInput();},getSound:()=>soundEnabled,toggleSound,getPhase:()=>state?.phase});
 playGuard=createPlayGuard({mouseLock,resetInput,getPhase:()=>state?.phase,isAlive:()=>!!state?.players.find(p=>p.id===identity)?.alive,menusOpen:()=>!!menus?.isOpen()});
-createFullscreen({button:$('fullscreen-toggle'),notify:toast,resetInput});
+createFullscreen({button:$('fullscreen-toggle'),buttons:[$('home-fullscreen'),$('lobby-fullscreen'),$('rotate-fullscreen')],notify:toast,resetInput});
 world.onLocalShot=()=>{clearTimeout(firingTimer);$('crosshair').classList.add('firing');firingTimer=setTimeout(()=>$('crosshair').classList.remove('firing'),90);tone(740+Math.random()*80,.07,.025);};
 renderOutfits(); world.updatePreview(outfit, hat); updateSound(); connect(); requestAnimationFrame(frame);
 
