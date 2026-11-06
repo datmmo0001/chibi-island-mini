@@ -102,7 +102,7 @@ export function advanceBullets(room, dt) {
   room.bullets = room.bullets.filter(b => {
     const x = b.x + b.vx * b.speed * dt, y = b.y + b.vy * b.speed * dt, z = b.z + b.vz * b.speed * dt;
     if(b.piercing){
-      for(const p of room.players.values())if(p.alive&&p.id!==b.owner&&!b.hitPlayers.has(p.id)&&cylinderHit(b.x,b.y,b.z,x,y,z,p.x,p.z,RULES.playerRadius+.3,p.y,p.y+2.8)!==null){
+      for(const p of room.players.values())if(p.alive&&p.id!==b.owner&&(!room.teamSize||p.team!==room.players.get(b.owner)?.team)&&!b.hitPlayers.has(p.id)&&cylinderHit(b.x,b.y,b.z,x,y,z,p.x,p.z,RULES.playerRadius+.3,p.y,p.y+2.8)!==null){
         b.hitPlayers.add(p.id);room.damage(p,b.damage,b.owner);room.event('hit',{attacker:b.owner,player:p.id});
       }
       b.x=x;b.y=y;b.z=z;b.life-=dt;
@@ -113,7 +113,7 @@ export function advanceBullets(room, dt) {
       const t = obstacleHit(b.x,b.y,b.z,x,y,z,o,.1);
       if (t !== null && t < first) { first = t; hit = { obstacle: o }; }
     }
-    for (const p of room.players.values()) if (p.alive && p.id !== b.owner) {
+    for (const p of room.players.values()) if (p.alive && p.id !== b.owner && (!room.teamSize||p.team!==room.players.get(b.owner)?.team)) {
       const t = cylinderHit(b.x, b.y, b.z, x, y, z, p.x, p.z, RULES.playerRadius + .1, p.y + .15, p.y + 2.6);
       if (t !== null && t < first) { first = t; hit = { player: p }; }
     }

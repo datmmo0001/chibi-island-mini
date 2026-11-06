@@ -13,6 +13,7 @@ export function useSkill(room,p){
     p.effect=id;p.effectRemaining=definition.duration;
     if(id==='flight'){p.flightAltitude=(p.y||0)+8;p.grounded=false;p.vy=14;}
   }
+  room.event('skill',{player:p.id,skill:id});
   room.event('pickup',{player:p.id,text:`${definition.name} · ${definition.description}`});return true;
 }
 

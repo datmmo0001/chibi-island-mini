@@ -7,7 +7,7 @@ import { Room, makeCode, makeId } from './game.js';
 import { RULES, GAME_VERSION } from '../shared.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const types = { '.wav':'audio/wav', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 export function createGameServer({ maxRooms = 50 } = {}) {
   const rooms = new Map(), sessions = new Map();
   const server = http.createServer(async (req, res) => {
@@ -63,7 +63,7 @@ export function createGameServer({ maxRooms = 50 } = {}) {
           if (data.type === 'create' || data.type === 'solo') {
             if (rooms.size >= maxRooms) throw new Error('Máy chủ đang đầy, vui lòng thử lại sau.');
             let code; do { code = makeCode(); } while (rooms.has(code));
-            room = new Room(code, null, { mode: data.type === 'solo' ? 'solo' : 'party', mapId: data.mapId || 'meadow', capacity:data.capacity, respawn:data.respawn }); rooms.set(code, room);
+            room = new Room(code, null, { mode: data.type === 'solo' ? 'solo' : 'party', mapId: data.mapId || 'meadow', capacity:data.capacity, respawn:data.respawn, teamSize:data.teamSize }); rooms.set(code, room);
           } else {
             room = rooms.get(String(data.code || '').toUpperCase().trim());
             if (!room) throw new Error('Không tìm thấy phòng. Kiểm tra lại mã nhé.');

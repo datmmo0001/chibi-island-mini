@@ -8,8 +8,10 @@ const botNames = ['Bông Gòn', 'Kẹo Dẻo', 'Mít Ướt', 'Bắp Rang', 'Mâ
 const emptyInput = () => ({ x: 0, z: 0, aim: 0, pitch: 0, fire: false, sprint: false });
 const emptyActions = () => ({ jump: false, interact: false, reload: false, swap: false, heal: false, skill: false });
 export class Room {
-  constructor(code, hostId, { random = Math.random, mode = 'party', mapId = 'candy', capacity=3, respawn=false } = {}) {
+  constructor(code, hostId, { random = Math.random, mode = 'party', mapId = 'candy', capacity=3, respawn=false, teamSize=0 } = {}) {
+    this.teamSize=[2,3,4,5].includes(teamSize)&&mode!=='solo'?teamSize:0;
     this.capacity=capacity===5?5:mapId==='frontier'&&capacity===20?20:3;this.respawn=mapId==='candy'&&respawn===true;this.code = code; this.hostId = hostId; this.random = random; this.phase = 'lobby';
+    if(this.teamSize)this.capacity=this.teamSize*2;
     this.mode = mode === 'solo' ? 'solo' : 'party';
     this.map = getMap(mapId); this.duration = this.map.duration;
     this.players = new Map(); this.bullets = []; this.events = []; this.time = 0;
@@ -28,6 +30,7 @@ export class Room {
       outfit: OUTFITS.some(o => o.id === outfit) ? outfit : 'bear', hat: HATS.includes(hat) ? hat : 'ears',
       x: 0, y: 0, z: 0, aim: 0, hp: 100, alive: true, kills: 0, ready: false, inventory: [], slot: 0,
       connected: true, disconnectedFor: 0, cooldown: 0, input: emptyInput(), lastInput: 0, moving: false };
+    if(this.teamSize){const counts=[1,2].map(t=>this.humans().filter(q=>q.team===t).length);p.team=counts[0]<this.teamSize&&counts[0]<=counts[1]?1:2;}
     this.players.set(id, p); return p;
   }
   configure(id, data) {
@@ -35,6 +38,7 @@ export class Room {
     const p = this.players.get(id); if (!p || p.bot) return;
     if (OUTFITS.some(o => o.id === data.outfit)) p.outfit = data.outfit;
     if (HATS.includes(data.hat)) p.hat = data.hat;
+    if(this.teamSize&&[1,2].includes(data.team)&&data.team!==p.team){if(this.humans().filter(q=>q.team===data.team).length>=this.teamSize)throw new Error('Đội đã đủ người.');p.team=data.team;p.ready=false;}
     if (typeof data.ready === 'boolean') p.ready = data.ready;
   }
   start(id) {
@@ -44,14 +48,16 @@ export class Room {
       throw new Error('Cần ít nhất một người chơi và tất cả bấm Sẵn sàng.');
     this.round++; this.time = 0; this.phase = 'playing'; this.bullets = []; this.events = []; this.winner = null; this.markers = [];
     resetWorld(this);
-    const fillCount = (this.capacity===20?20:8) - this.humans().length;
+    const fillCount = (this.teamSize?this.capacity:this.capacity===20?20:8) - this.humans().length;
     for (let i = 0; i < fillCount; i++) this.players.set(`bot-${i}`, {
       id: `bot-${i}`, name: botNames[i%botNames.length]+(i>=botNames.length?` ${Math.floor(i/botNames.length)+1}`:""), bot: true, outfit: OUTFITS[i % 3].id, hat: HATS[i % 3],
       connected: true, ready: true, input: emptyInput(), decision: 0, drift: this.random() * Math.PI * 2
     });
+    if(this.teamSize){for(const p of this.players.values())if(p.bot){p.team=[1,2].find(t=>[...this.players.values()].filter(q=>q.team===t).length<this.teamSize);}}
     [...this.players.values()].forEach((p, i) => {
-      const spawn = this.capacity===20?{x:Math.sin(i*Math.PI/10)*170,z:Math.cos(i*Math.PI/10)*170}:this.map.spawnPoints[i%this.map.spawnPoints.length];
+      const spawn = this.capacity===20?{x:Math.sin(i*Math.PI/10)*170,z:Math.cos(i*Math.PI/10)*170}:{...this.map.spawnPoints[i%this.map.spawnPoints.length]};
       if(this.capacity===20){for(let n=0;n<80&&this.map.obstacles.some(o=>obstacleSolid(o,this.obstacles)&&obstacleContains(o,spawn.x,spawn.z,1));n++){spawn.x*=.985;spawn.z*=.985;}}
+      if(this.teamSize){const mates=[...this.players.values()].filter(q=>q.team===p.team),index=mates.indexOf(p);const center=this.map.spawnPoints[p.team===1?0:Math.floor(this.map.spawnPoints.length/2)];let found=false;for(let n=0;n<100;n++){const angle=n*2.39996+index*1.2,r=2+index*2+n*.15;const x=center.x+Math.sin(angle)*r,z=center.z+Math.cos(angle)*r;if(Math.hypot(x,z)<this.map.radius-2&&!this.map.obstacles.some(o=>obstacleSolid(o,this.obstacles)&&obstacleContains(o,x,z,1))&&!mates.slice(0,index).some(q=>Math.hypot(q.x-x,q.z-z)<1.5)){spawn.x=x;spawn.z=z;found=true;break;}}if(!found){spawn.x=center.x;spawn.z=center.z;}}
       Object.assign(p, { x: spawn.x, y: 0, z: spawn.z, vy: 0, previousY: 0, grounded: true, aim: Math.PI, pitch: 0,
         hp: 100, alive: true, kills: 0, cooldown: 0.6 + this.random(), input: emptyInput(), actions: emptyActions(), lastInput: 0, moving: false,
         sprinting: false, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, scope: false, skill: null, effect: null, effectRemaining: 0, climb: null, concealed: false, revealedUntil: 0, lastMarkerAt: -Infinity,
@@ -112,21 +118,21 @@ export class Room {
     return marker;
   }
   radius() { return this.zone().radius; }
-  event(type, data) { this.events.push({ id: ++this.seq, type, ...data }); if (this.events.length > 30) this.events.shift(); }
+  event(type, data) { this.events.push({ id: ++this.seq, type, at:this.time, ...data }); if (this.events.length > 30) this.events.shift(); }
   damage(p, amount, attacker) {
-    if (!p.alive) return;
+    if (!p.alive || (attacker&&this.teamSize&&this.players.get(attacker)?.team===p.team)) return;
     p.hp = Math.max(0, p.hp - amount);
     if (p.hp <= 0) {
       p.alive = false; p.moving = false;p.respawnAt=this.time+3;
       const by = this.players.get(attacker); if (by) by.kills++;
-      this.event('out', { player: p.id, attacker, text: `${p.name} đã bay lên trời${by ? ` · ${by.name}` : ''}` });
+      this.event('out', { player: p.id, attacker, kills:by?.kills||0, text: `${p.name} đã bay lên trời${by ? ` · ${by.name}` : ''}` });
     }
   }
   botInput(p, dt) {
     p.decision -= dt; if (p.decision > 0) return;
     p.decision = .18 + this.random() * .13;
     const zone = this.zone(), gun = activeWeapon(p);
-    const targets = [...this.players.values()].filter(q => q.id !== p.id && q.alive && (!q.concealed || Math.hypot(q.x-p.x,q.z-p.z)<5));
+    const targets = [...this.players.values()].filter(q => q.id !== p.id && (!this.teamSize||q.team!==p.team) && q.alive && (!q.concealed || Math.hypot(q.x-p.x,q.z-p.z)<5));
     targets.sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
     const lineOfSight = q => visible(p.x, p.z, q.x, q.z, this.map, this.obstacles, Math.min(p.y + 1.3, q.y + 1.3));
     const target = targets.find(q => Math.hypot(q.x - p.x, q.z - p.z) < 45 && lineOfSight(q)) || targets[0];
@@ -187,7 +193,7 @@ export class Room {
       if (actions.interact) interact(this, p);
       if (actions.swap && p.inventory.length > 1) { p.slot = (p.slot + 1) % p.inventory.length; p.reload = 0; }
       if (actions.reload) reloadWeapon(p);
-      if (actions.heal) healPlayer(p);
+      if (actions.heal) {const hp=p.hp;healPlayer(p);if(p.hp>hp)this.event('heal',{player:p.id});}
       updateWeapon(p, dt);
       if (input.fire && !p.climb) shoot(this, p);
       updateSkill(p,dt);
@@ -200,20 +206,29 @@ export class Room {
       if (!pickup.active) { pickup.cooldown -= dt; if (pickup.cooldown <= 0) pickup.active = true; }
       if (!pickup.active) continue;
       const p = [...this.players.values()].find(p => p.alive && p.hp < 100 && p.y < 1.5 && Math.hypot(p.x - pickup.x, p.z - pickup.z) < 1.3);
-      if (p) { p.hp = Math.min(100, p.hp + 35); pickup.active = false; pickup.cooldown = 22; }
+      if (p) { this.event('heal',{player:p.id});p.hp = Math.min(100, p.hp + 35); pickup.active = false; pickup.cooldown = 22; }
     }
     const alive = [...this.players.values()].filter(p => p.alive);
-    if ((!this.respawn&&alive.length <= 1) || this.time >= this.duration) {
+    if(this.teamSize){
+      const standing=new Set(alive.map(p=>p.team));
+      if((!this.respawn&&standing.size<=1)||this.time>=this.duration){
+        const scores=[1,2].map(team=>{const all=[...this.players.values()].filter(p=>p.team===team);return{team,kills:all.reduce((n,p)=>n+p.kills,0),alive:all.filter(p=>p.alive).length,hp:all.reduce((n,p)=>n+(p.alive?p.hp:0),0)};});
+        scores.sort((a,b)=>(this.respawn?b.kills-a.kills:b.alive-a.alive)||b.hp-a.hp||b.kills-a.kills);
+        const [a,b]=scores,tie=a.kills===b.kills&&a.alive===b.alive&&a.hp===b.hp;
+        this.winner=tie?null:{team:a.team,name:`Đội ${a.team===1?'Xanh':'Cam'}`,kills:a.kills};
+        this.phase='finished';this.bullets=[];this.event('finish',{text:this.winner?`${this.winner.name} chiến thắng!`:'Hai đội hòa nhau!'});
+      }
+    }else if ((!this.respawn&&alive.length <= 1) || this.time >= this.duration) {
       const winner = (this.respawn?[...this.players.values()]:alive).sort((a, b) => (this.respawn?b.kills-a.kills:0)||b.hp - a.hp || b.kills - a.kills || a.id.localeCompare(b.id))[0];
       this.phase = 'finished'; this.winner = winner ? { id: winner.id, name: winner.name, bot: winner.bot } : null;
       this.bullets = []; this.event('finish', { text: winner ? `${winner.name} chiến thắng!` : 'Hòa cả làng!' });
     }
   }
   snapshot() {
-    return { type: 'state', code: this.code, phase: this.phase, mode: this.mode, capacity:this.capacity, respawn:this.respawn, hostId: this.hostId, round: this.round,
+    return { type: 'state', code: this.code, phase: this.phase, mode: this.mode, capacity:this.capacity, teamSize:this.teamSize, respawn:this.respawn, hostId: this.hostId, round: this.round,
       mapId: this.map.id, duration: this.duration, time: Math.round(this.time * 100) / 100, radius: this.radius(), zone: this.zone(), winner: this.winner, markers: this.markers.map(m => ({ ...m })),
-      players: [...this.players.values()].map(({ id, name, bot, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining, concealed, climb }) =>
-        ({ id, name, bot, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
+      players: [...this.players.values()].map(({ id, name, bot, team, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining, concealed, climb }) =>
+        ({ id, name, bot, team, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
       bullets: this.bullets.map(({ id, owner, weapon, x, y, z, vx, vy, vz, speed }) => ({ id, owner, weapon, x, y, z, vx, vy, vz, speed })),
       loot: this.loot.filter(l => l.active), obstacles: [...this.obstacles.values()].filter(s => s.open || s.destroyed || s.hp < s.maxHp),
       pickups: this.pickups.map(({ id, x, z, active }) => ({ id, x, z, active })), events: this.events };
