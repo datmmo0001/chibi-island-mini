@@ -1,6 +1,8 @@
 # Working on Chibi Island
 
-CURRENT STATUS: Version 0.6.3 has been published to Render and verified Live on 2026-11-06 via /health, /version, and tests/public-smoke.mjs with three HTTPS/WSS clients. Future feature changes should be previewed locally before publication unless the user authorizes otherwise. Verify the live version before reporting completion.
+REQUIRED RELEASE RULE: Always let the user inspect the local/offline preview first. Never upload source or deploy to the server until the user approves that specific preview. User explicitly authorized adding 4 original anime-style 3D characters and publishing the complete 0.7.2 release after testing. Proceed with this release; future releases still require local preview approval.
+
+CURRENT STATUS: Version 0.6.4 published to the fixed Render URL and verified Live on 2026-11-06. Commit 0a727d4823fe97fde11cd331592bfa80e4ac0f35. HTTPS/version checks, three-client WSS smoke, and five-client WSS smoke on every map passed. All 52 tests passed. Public lobby and portrait gate verified; actual pointer lock needs direct Chrome/Edge because the embedded browser blocks capture.
 
 - Project: this directory. Preserve the original game_development_plan.md in the parent directory.
 - Public game: https://chibi-island-mini.onrender.com
@@ -15,3 +17,5 @@ CURRENT STATUS: Version 0.6.3 has been published to Render and verified Live on 
 - Use existing authenticated tools/browser sessions when available. There is no Git checkout in this directory yet; prior releases were uploaded through the GitHub browser UI. Do not assume local Git authentication exists.
 - Keep HUONG_DAN.md, BAN_GIAO.md, RENDER_HOSTING.md and CHANGELOG.md accurate. Update the packaged source and local runnable copy in the chat outputs after a release.
 - Real-device touch/performance testing and an Android package are still pending. Do not claim Play Store publication or an achieved store rating.
+
+LAN ACCESS: User authorized all phones on same Wi-Fi subnet. TCP 3100 allowed for 192.168.1.0/24 on Wi-Fi at 192.168.1.15 for game Node executable (Chibi-Game-3100-Allow-Wifi-LAN). Prior per-phone block now excludes whole /24; other-address block, other ports and UDP unchanged. LAN HTTP and WebSocket checked from PC; physical peer check remains with user. Do not restore Samsung-only restriction.

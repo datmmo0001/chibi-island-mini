@@ -1,4 +1,4 @@
-export const GAME_VERSION = '0.6.4';
+export const GAME_VERSION = '0.7.2';
 export const RULES = Object.freeze({ humans: 3, bots: 5, tickRate: 30, snapshotRate: 20, duration: 180, arenaRadius: 31 * Math.sqrt(5), playerRadius: 0.65, speed: 6.4, sprintMultiplier: 1.6, gravity: 25, jumpSpeed: 11.8, interactRange: 3.4, bulletSpeed: 58, damage: 16, fireInterval: 0.33, bulletLife: 1.3, reconnectSeconds: 25, markerLife: 8, markerCooldown: 3, markerRange: 18 });
 export const WEAPONS = Object.freeze({
   water: { id: 'water', name: 'Súng nước', damage: 16, speed: 58, interval: .28, capacity: 18, reserve: 54, reload: 1.3, life: 1.3, spread: .018, pellets: 1, color: '#42eaff' },
@@ -16,7 +16,11 @@ export const SKILLS = Object.freeze({
 export const OUTFITS = [
   { id: 'bear', name: 'Gấu Caramel', color: '#c98b57', light: '#ffe3b9', accent: '#734c39' },
   { id: 'bunny', name: 'Thỏ Mây Hồng', color: '#ef9ebc', light: '#fff0ee', accent: '#c35e91' },
-  { id: 'duck', name: 'Vịt Đi Mưa', color: '#f5cd55', light: '#fff3bd', accent: '#ee8746' }
+  { id: 'duck', name: 'Vịt Đi Mưa', color: '#f5cd55', light: '#fff3bd', accent: '#ee8746' },
+  {id:'akari',name:'Akari · Hoa Anh Đào',anime:true,color:'#f4a8c2',light:'#fff1eb',accent:'#a63665',hair:'#b44b76',eye:'#8742b1'},
+  {id:'ren',name:'Ren · Ninja Gió',anime:true,color:'#354d83',light:'#bfe9ef',accent:'#e65d62',hair:'#23344c',eye:'#3598a6'},
+  {id:'aoi',name:'Aoi · Pháp Sư Sao',anime:true,color:'#7772c8',light:'#e6e8ff',accent:'#ecc873',hair:'#79baca',eye:'#3d76bf'},
+  {id:'haru',name:'Haru · Lữ Khách Nắng',anime:true,color:'#e6ad51',light:'#fff5d7',accent:'#528275',hair:'#705444',eye:'#71954a'}
 ];
 export const HATS = ['ears', 'cap', 'leaf'];
 export const MAP = Object.freeze({

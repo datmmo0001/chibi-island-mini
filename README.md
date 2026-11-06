@@ -1,23 +1,19 @@
-# Chibi Island Mini — 0.6.4
+# Chibi Island Mini — 0.7.2
 
-## Mới ở bản 0.6.4
+Game online góc nhìn thứ ba: https://chibi-island-mini.onrender.com
 
-- Điện thoại chỉ chơi ngang. Xoay dọc sẽ che toàn bộ giao diện và ngừng gửi thao tác; trận online vẫn tiếp diễn.
-- PC bấm Vào trận / Khóa chuột để điều khiển tâm bắn. Con trỏ được ẩn khi khóa, Esc mở chuột, Tab cài đặt. Nếu trình duyệt từ chối thì mở trực tiếp trong Chrome/Edge; không còn chế độ kéo chuột tự do thay thế.
-- Màn chờ gọn trong một khung ngang. Icon thông tin mở map/chế độ; icon người mở danh sách đầy đủ; bánh răng mở cài đặt. Bản tóm tắt hiện tối đa tám thẻ người, phần chi tiết luôn đủ mọi người.
+Bản phát hành được người dùng yêu cầu cập nhật sau khi thêm bốn nhân vật 3D chibi phong cách hoạt hình Nhật có thiết kế riêng: Akari, Ren, Aoi, Haru. Chọn trong Trang phục; xem mô hình xoay tại /characters.html. 66 kiểm tra qua trước khi triển khai. Kiểm tra /health và /version để xác nhận bản đang chạy.
 
+Bao gồm đầy đủ thay đổi 0.6.5–0.7.1: màn hình chuẩn bị gọn, chân bảng kết quả giữ nút chơi lại/rời phòng, nút toàn màn hình và khóa ngang khi trình duyệt hỗ trợ; tổ đội 2v2,3v3,4v4,5v5 và chặn sát thương đồng đội; nhạc chỉ ở phòng chờ, bật/tắt nhạc và hiệu ứng riêng, giọng tiếng Anh One kill–Four kills/Pentakill; cụm nút theo ảnh 7.
 
-Chơi tại **https://chibi-island-mini.onrender.com**. Bản 0.6.4 đã được người dùng duyệt phát hành; kiểm tra phiên bản đang chạy tại `/health` hoặc `/version`.
+Mọi map giữ phòng 3/5 người thật, Rừng Gió có 20 người. Chơi riêng và chỗ trống có đối thủ máy. Hai đội vào cùng mã phòng; ♟ chọn Xanh/Cam. Chưa có ghép trận tự động giữa các phòng.
 
-Game súng nước góc nhìn thứ ba. Mọi map có phòng tối đa 3 hoặc 5 người thật; Rừng Gió thêm tùy chọn 20 người. Chỗ trống được bổ sung đến 8 nhân vật (phòng 3/5) hoặc 20 nhân vật (phòng 20). Chơi ngay mở trận riêng.
+Đảo Kẹo rộng 5×, có tường và chế độ hồi sinh 3 giây/tính kill. Cỏ Xanh 20× và Rừng Gió 40× diện tích gốc, sinh tồn tối đa 10 phút. Loot, năm kỹ năng, ống ngắm, cầu thang/chòi và bụi núp.
 
-- Đảo Kẹo rộng 5 lần bản gốc, có bụi núp và tường chặn đạn. Tùy chọn hồi sinh sau 3 giây, xếp hạng theo kill khi hết giờ.
-- Cỏ Xanh rộng 20 lần và Rừng Gió rộng 40 lần diện tích Đảo Kẹo gốc, sinh tồn tối đa 10 phút. Có loot, vòng bo, công trình, cầu thang và chòi canh.
-- Kỹ năng và ống ngắm nhặt từ hòm; chat online ở màn chọn map. Bố cục HUD điện thoại chỉnh được vị trí, cỡ và độ rõ.
-- PC: WASD đi, Shift chạy, Space nhảy, E nhặt/mở/leo, R nạp, Q đổi súng, H hồi máu, C kỹ năng, V ngắm. Bấm cảnh để xin khóa chuột; Esc mở chuột, Tab cài đặt. Nếu khung nhúng từ chối khóa chuột, mở link trực tiếp trong Chrome/Edge.
+PC: WASD, Shift chạy, Space nhảy, E nhặt/mở/leo, R nạp, Q đổi súng, H hồi máu, C kỹ năng, V ngắm. Bấm khóa chuột để vào trận; Esc mở con trỏ, Tab cài đặt. Mở Chrome/Edge trực tiếp nếu trình duyệt nhúng chặn pointer lock.
 
-Chơi cùng bạn: chọn map và số người → Tạo phòng cùng bạn → gửi mã/lời mời → mọi người vào và sẵn sàng → chủ phòng bắt đầu.
+Điện thoại chơi ngang; có nút toàn màn hình ở trang đầu/phòng chờ/trong trận. Trình duyệt có thể từ chối khóa xoay; xoay thủ công khi cần. Hệ thống vẫn cho thoát fullscreen. Cần tiếp tục thử đa chạm/hiệu năng trên thiết bị thật. Chưa có Android APK/Play Store.
 
-Máy chủ Render chạy độc lập với máy tính cá nhân. Gói Free có thể cần chờ lúc thức dậy sau khi vắng người. Phòng trong RAM mất khi máy chủ khởi động lại. Auto-Deploy giữ Off; chỉ Manual Deploy sau khi đã tải đủ mã.
+Node >=22: npm install, npm test, npm start. Kiểm tra online: node tests/public-smoke.mjs https://chibi-island-mini.onrender.com
 
-Node.js 22+: `npm install`, `npm test`, `npm start`. Kiểm tra link công khai: `node tests/public-smoke.mjs https://chibi-island-mini.onrender.com`. Đã có 52 kiểm thử logic/mạng/HUD; cần tiếp tục thử hiệu năng, đa chạm trên điện thoại thật. Chưa phát hành Android/Play Store.
+Render Free, một instance; máy chủ chạy độc lập PC. Auto-Deploy Off; tải đủ mã rồi Manual Deploy. Phòng ở RAM mất sau restart. Các bản tiếp theo luôn để người dùng thử local và duyệt trước khi upload/deploy.

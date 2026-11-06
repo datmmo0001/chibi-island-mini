@@ -1,3 +1,25 @@
+# 0.7.2 — release authorized
+Four original anime-style 3D characters with distinct hair/outfits/accessories, matching selection portraits and a rotatable 3D gallery. Includes all 0.6.5–0.7.1 changes. 66 local tests passed; publication pending live verification.
+
+# 0.7.1 — LOCAL ONLY
+Lobby-only music; separate music/effects switches on lobby/settings; offline Pentakill voice replaces five-kills cue. Right-side thumb arc restored from photo 7 with new layout storage revision. 64 tests passed; browser phase/switch checks passed. Pending user offline approval.
+
+# 0.7.0 — LOCAL PREVIEW ONLY
+Original loop music, heal/defeat/skill/kill effects, five offline English kill voices, sound previews and visibility/volume handling. Two teams of 2–5 players, lobby team choice, authoritative friendly-fire protection and team results. 63 tests passed. User approval of local preview required before upload/deployment.
+
+# 0.6.9 — local preview
+User-saved landscape controls promoted to defaults, retaining exact positions/scale/opacity; compact viewport fallback preserved. Added UI layout export. Not uploaded or deployed.
+
+# 0.6.7 — local preview
+Results content scrolls independently; replay/leave controls stay visible. Verified a 20-player result list at 915×280 before and after scrolling.
+
+# 0.6.6 — local preview
+Fullscreen controls on home/lobby/portrait gate; gesture-triggered landscape lock with visible fallback; compact lobby at 280px height. 55 tests pass. Samsung hardware rotation pending user check.
+
+# 0.6.5 — local preview only
+
+Compact preparation screen; upper-right play actions; outfit-based human player portraits in lobby. User approval of local preview required before every upload/deployment.
+
 # Các bản cập nhật
 
 ## 0.6.4 — Chơi ngang, khóa chuột và màn chờ gọn

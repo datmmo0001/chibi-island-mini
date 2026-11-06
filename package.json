@@ -1,6 +1,6 @@
 {
   "name": "chibi-island-mini",
-  "version": "0.6.4",
+  "version": "0.7.2",
   "private": true,
   "type": "module",
   "description": "Third-person multiplayer survival with 40x forest island, climbable structures, skills and scopes.",
