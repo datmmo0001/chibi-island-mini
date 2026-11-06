@@ -1,5 +1,6 @@
 import { IslandScene } from './scene.js';
 import { createMenus } from './menus.js';
+import { createPlayGuard } from './play-guard.js';
 import { createMouseLock } from './mouse-lock.js';
 import { createFullscreen } from './fullscreen.js';
 import { RULES, OUTFITS, HATS, WEAPONS, SKILLS, getMap, visible } from '/shared.js';
@@ -35,7 +36,7 @@ let ws, identity = null, state = null, retry = 0, retryTimer, toastTimer, pendin
 let lastZoneKey = '';
 const keys = new Set(), pointer = { x: 0, y: 0, down: false, look: false }, touch = { x: 0, z: 0, fire: false, sprint: false };
 const actions = { jump: false, interact: false, reload: false, swap: false, heal: false, skill: false };
-let mouseLock, scoped=false;
+let mouseLock, playGuard, scoped=false;
 let audio = null, menus, soundEnabled = safeStore.get('chibi-sound', 'off') === 'on', latency = 0, resumed = false;
 let lastHealth = null, damageTimer, firingTimer, feedSignature = '', compassAt = 0;
 $('player-name').value = safeStore.get('chibi-name');
@@ -49,7 +50,7 @@ function home() {
   mouseLock?.release();
   identity = null; state = null; sessionStore.set(null); lastPhase = ''; lastEvent = 0; lastRound = 0; pending = false;
   $('home').hidden = false; $('lobby').hidden = true; $('hud').hidden = true; $('results').hidden = true;
-  document.body.classList.remove('playing'); world.setMode('home'); world.updatePreview(outfit, hat); resetInput();
+  document.body.classList.remove('playing','lobby-mode'); world.setMode('home'); world.updatePreview(outfit, hat); resetInput();
   activeMap = getMap(selectedMap); world.changeMap(selectedMap);
   setPending(false);
   lastHealth = null; menus?.refreshNotice(); $('damage-vignette').classList.remove('visible');
@@ -113,9 +114,11 @@ $('copy-invite').onclick = async () => {
 function renderLobby(data) {
   activeMap = getMap(data.mapId); $('lobby').querySelector('.lobby-description').textContent = `${activeMap.name} · Mời thêm bạn hoặc bắt đầu ngay khi đã sẵn sàng.`;
   document.querySelector('.bot-note small').textContent=`Mỗi trận có ${data.capacity===20?20:8} nhân vật cùng tranh tài`;
+  $('lobby-mode-line').textContent=`${activeMap.name} · ${data.capacity||3} chỗ · ${data.respawn?'Hồi sinh / tính kill':activeMap.survival?'Sinh tồn':'Đấu trường'}`;
+  $('detail-map').textContent=activeMap.name;$('detail-capacity').textContent=`Tối đa ${data.capacity||3} người thật`;$('detail-mode').textContent=data.respawn?'Hồi sinh sau 3s · Tính kill':activeMap.survival?'Sinh tồn':'Đấu trường';$('detail-duration').textContent=`Tối đa ${Math.round(activeMap.duration/60)} phút`;
   const humans = data.players.filter(p => !p.bot), me = humans.find(p => p.id === identity);
   $('lobby-code').textContent = data.code; $('lobby-count').textContent = `${humans.length}/${data.capacity||3} bạn đã vào phòng`;
-  $('player-slots').replaceChildren(...Array.from({ length: data.capacity||3 }, (_, i) => {
+  $('player-slots').replaceChildren(...Array.from({ length: Math.min(8,data.capacity||3,humans.length+1) }, (_, i) => {
     const p = humans[i], row = document.createElement('div'); row.className = 'player-slot' + (!p ? ' empty' : '');
     const icon = document.createElement('div'); icon.className = 'player-avatar'; icon.textContent = p ? ({ bear: '🐻', bunny: '🐰', duck: '🐤' }[p.outfit]) : '+';
     const details = document.createElement('div'); details.className = 'player-details'; const title = document.createElement('b'), sub = document.createElement('small');
@@ -125,6 +128,7 @@ function renderLobby(data) {
     if (p) { const status = document.createElement('span'); status.className = 'player-ready' + (p.ready ? ' yes' : ''); status.textContent = p.ready ? '✓ Sẵn sàng' : 'Đang chuẩn bị'; row.append(status); }
     return row;
   }));
+  $('people-details').replaceChildren(...humans.map(p=>{const li=document.createElement('li');li.textContent=`${p.name}${p.id===data.hostId?' · Chủ phòng':''} · ${p.ready?'Sẵn sàng':'Đang chuẩn bị'}`;return li;}));
   $('ready').textContent = me?.ready ? '✓ Đã sẵn sàng · Bấm để hủy' : 'Mình sẵn sàng! ✓';
   const canStart = humans.length > 0 && humans.every(p => p.ready && p.connected), isHost = data.hostId === identity;
   $('start').disabled = !isHost || !canStart;
@@ -138,7 +142,7 @@ function renderState(data) {
   if (data.round !== lastRound) { lastEvent = 0; lastZoneKey = ''; feedSignature = ''; }
   if (phaseChanged) { lastHealth = null; $('damage-vignette').classList.remove('visible'); }
   $('home').hidden = true; $('lobby').hidden = data.phase !== 'lobby'; $('hud').hidden = data.phase !== 'playing'; $('results').hidden = data.phase !== 'finished';
-  document.body.classList.toggle('playing', data.phase !== 'lobby');
+  document.body.classList.toggle('playing', data.phase !== 'lobby');document.body.classList.toggle('lobby-mode',data.phase==='lobby');
   if (phaseChanged) { resetInput();if(data.phase!=='playing')mouseLock?.release(); if (data.phase === 'playing') { toast(activeMap.survival ? 'Nhặt súng gần bạn · Mở hòm tìm kỹ năng / ống ngắm · Leo thang bằng E' : 'Bấm vào cảnh để khóa chuột · Chuột trái bắn · Space nhảy'); tone(620, .15, .05); } }
   if (data.phase === 'lobby') renderLobby(data);
   else {
@@ -238,7 +242,7 @@ function renderInventory(me, data) {
   $('interact-prompt').hidden = !hint || !me.alive; $('interact-text').textContent = me.climbing?'Đang leo · Nhảy để rời thang':hint;
 }
 function setScoped(value){scoped=!!value;world.setScoped(scoped);document.body.classList.toggle('scoped',scoped);$('scope-overlay').hidden=!scoped;$('touch-scope').setAttribute('aria-pressed',String(scoped));}
-function toggleScope(){const me=state?.players.find(p=>p.id===identity);if(state?.phase!=='playing'||!me?.alive||menus?.isOpen())return;if(!me.scope||!me.inventory?.length){toast('Mở hòm và nhặt ống ngắm trước, sau đó cầm súng để ngắm.');return;}setScoped(!scoped);flushInput();}
+function toggleScope(){const me=state?.players.find(p=>p.id===identity);if(state?.phase!=='playing'||!me?.alive||menus?.isOpen()||playGuard?.isBlocked())return;if(!me.scope||!me.inventory?.length){toast('Mở hòm và nhặt ống ngắm trước, sau đó cầm súng để ngắm.');return;}setScoped(!scoped);flushInput();}
 function renderAbilities(me){
   const active=SKILLS[me.effect],held=SKILLS[me.skill],skill=active||held,button=$('touch-skill');
   button.disabled=!me.alive||!held||!!active||me.climbing;button.classList.toggle('active',!!active);button.style.setProperty('--skill-color',skill?.color||'#d4bcff');
@@ -263,6 +267,7 @@ addEventListener('keydown', event => {
   if (state?.phase !== 'playing') return;
   if(event.code==='Tab'){event.preventDefault();mouseLock?.release();resetInput();$('settings-dialog').showModal();return;}
   if(event.code==='KeyV'&&!event.repeat){event.preventDefault();toggleScope();return;}
+  if(playGuard?.isBlocked()){if(event.code==='Enter'&&!event.repeat){event.preventDefault();mouseLock.retry();mouseLock.request();}return;}
   if (event.code === 'KeyT' && !event.repeat) { event.preventDefault(); markPosition(); return; }
   const actionKeys = { Space: 'jump', KeyE: 'interact', KeyR: 'reload', KeyQ: 'swap', KeyH: 'heal', KeyC: 'skill' };
   if (actionKeys[event.code]) { event.preventDefault(); if (!event.repeat) actions[actionKeys[event.code]] = true; }
@@ -276,8 +281,8 @@ addEventListener('keyup', event => { if (keys.delete(event.code)) flushInput(); 
 document.addEventListener('visibilitychange', () => { if (document.hidden) resetInput(); });
 let lookPointer = null;
 $('world').addEventListener('pointerdown', event => {
-  if (state?.phase !== 'playing' || menus?.isOpen()) return;
-  if(event.pointerType==='mouse'&&!mouseLock.locked()&&mouseLock.request()){event.preventDefault();return;}
+  if (state?.phase !== 'playing' || menus?.isOpen() || playGuard?.isPortrait()) return;
+  if(event.pointerType==='mouse'&&!mouseLock.locked()){event.preventDefault();mouseLock.retry();mouseLock.request();return;}
   if(event.pointerType==='mouse'&&event.button===2&&mouseLock.locked()){event.preventDefault();toggleScope();return;}
   if (event.pointerType === 'mouse' && event.button === 0) { pointer.down = true; initAudio(); }
   if ((event.pointerType === 'mouse' && event.button === 2) || (event.pointerType !== 'mouse' && event.clientX > innerWidth * .36)) {
@@ -307,12 +312,12 @@ for(const [id,key]of [['touch-jump','jump'],['touch-interact','interact'],['touc
 $('touch-scope').onclick=toggleScope;
 $('touch-sprint').onclick=()=>{touch.sprint=!touch.sprint;$('touch-sprint').classList.toggle('active',touch.sprint);flushInput();};
 for(let i=0;i<2;i++)$(`weapon-slot-${i}`).onclick=()=>{const me=state?.players.find(p=>p.id===identity);if(me&&me.inventory?.[i]&&me.slot!==i){actions.swap=true;flushInput();}};
-function markPosition(){const me=state?.players.find(p=>p.id===identity);if(state?.phase==='playing'&&me?.alive&&!menus?.isOpen())send({type:'marker',aim:world.cameraYaw});}
+function markPosition(){const me=state?.players.find(p=>p.id===identity);if(state?.phase==='playing'&&me?.alive&&!menus?.isOpen()&&!playGuard?.isBlocked())send({type:'marker',aim:world.cameraYaw});}
 $('mark-position').onclick=markPosition;
 function flushInput(){
   if(!identity||state?.phase!=='playing'||ws?.readyState!==WebSocket.OPEN)return;
   const me=state.players.find(p=>p.id===identity);if(!me?.alive)return;
-  if (menus?.isOpen() || document.hidden) { world.setLocalInput({fire:false}); send({type:'input',x:0,z:0,aim:me.aim,fire:false}); return; }
+  if (menus?.isOpen() || document.hidden || playGuard?.isBlocked()) { world.setLocalInput({fire:false}); send({type:'input',x:0,z:0,aim:me.aim,fire:false}); return; }
   let x=Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft'))+touch.x;
   let z=Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp'))+touch.z;
   const d=Math.hypot(x,z);if(d>1){x/=d;z/=d;}
@@ -330,9 +335,10 @@ function flushInput(){
 setInterval(flushInput,50);
 setInterval(()=>{if(ws?.readyState===WebSocket.OPEN)send({type:'ping',at:performance.now()});},2500);
 let previous = performance.now();
-function frame(now) { const dt = Math.min((now - previous) / 1000, .05); previous = now; world.frame(dt); if(state?.phase==='playing'&&now-compassAt>100){compassAt=now;const degrees=((Math.PI-world.cameraYaw)*180/Math.PI%360+360)%360;const names=['BẮC','ĐÔNG BẮC','ĐÔNG','ĐÔNG NAM','NAM','TÂY NAM','TÂY','TÂY BẮC'];$('compass-name').textContent=names[Math.round(degrees/45)%8];$('compass-degrees').textContent=`${String(Math.round(degrees)%360).padStart(3,'0')}°`;} requestAnimationFrame(frame); }
-mouseLock=createMouseLock({canvas:$('world'),isPlayable:()=>state?.phase==='playing'&&state.players.find(p=>p.id===identity)?.alive&&!menus?.isOpen(),rotate:(dx,dy)=>world.rotateCamera(dx,dy),resetInput,notify:message=>{toast(message);$('mouse-lock-hint').textContent='Giữ chuột phải để xoay · V ngắm · Tab cài đặt';}});
+function frame(now) { playGuard?.refresh();const dt = Math.min((now - previous) / 1000, .05); previous = now; world.frame(dt); if(state?.phase==='playing'&&now-compassAt>100){compassAt=now;const degrees=((Math.PI-world.cameraYaw)*180/Math.PI%360+360)%360;const names=['BẮC','ĐÔNG BẮC','ĐÔNG','ĐÔNG NAM','NAM','TÂY NAM','TÂY','TÂY BẮC'];$('compass-name').textContent=names[Math.round(degrees/45)%8];$('compass-degrees').textContent=`${String(Math.round(degrees)%360).padStart(3,'0')}°`;} requestAnimationFrame(frame); }
+mouseLock=createMouseLock({canvas:$('world'),isPlayable:()=>state?.phase==='playing'&&state.players.find(p=>p.id===identity)?.alive&&!menus?.isOpen()&&!playGuard?.isPortrait(),rotate:(dx,dy)=>world.rotateCamera(dx,dy),resetInput,notify:()=>{$('mouse-lock-status').textContent='Trình duyệt này chưa cho khóa chuột. Hãy mở game trực tiếp trong Chrome hoặc Edge, rồi bấm lại để vào trận.';}});
 menus=createMenus({world,store:safeStore,resetInput:()=>{mouseLock.release();resetInput();},getSound:()=>soundEnabled,toggleSound,getPhase:()=>state?.phase});
+playGuard=createPlayGuard({mouseLock,resetInput,getPhase:()=>state?.phase,isAlive:()=>!!state?.players.find(p=>p.id===identity)?.alive,menusOpen:()=>!!menus?.isOpen()});
 createFullscreen({button:$('fullscreen-toggle'),notify:toast,resetInput});
 world.onLocalShot=()=>{clearTimeout(firingTimer);$('crosshair').classList.add('firing');firingTimer=setTimeout(()=>$('crosshair').classList.remove('firing'),90);tone(740+Math.random()*80,.07,.025);};
 renderOutfits(); world.updatePreview(outfit, hat); updateSound(); connect(); requestAnimationFrame(frame);

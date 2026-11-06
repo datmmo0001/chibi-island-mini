@@ -8,11 +8,11 @@
   <title>Chibi Island · Đảo nhỏ, niềm vui lớn</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/hud.css">
+  <link rel="stylesheet" href="/hud.css"><link rel="stylesheet" href="/play-shell.css">
   <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
 </head>
 <body>
-  <canvas id="world" aria-label="Đảo Chibi 3D"></canvas>
+  <canvas id="world" tabindex="0" aria-label="Đảo Chibi 3D"></canvas><div id="game-ui">
   <div class="vignette"></div>
   <header id="header">
     <a class="brand" href="/" aria-label="Chibi Island trang chủ"><span class="brand-mark">✿</span><span>chibi<span class="brand-light">island</span><small>ĐẢO NHỎ, NIỀM VUI LỚN</small></span></a>
@@ -47,14 +47,14 @@
   </main>
 
   <section id="lobby" class="overlay-panel" hidden>
-    <div class="eyebrow">✦ HỘI BẠN ĐÃ ĐẾN</div><h1>Phòng chờ<br><span>của chúng mình.</span></h1>
-    <div class="room-code-card"><div><span>MÃ PHÒNG</span><strong id="lobby-code">------</strong></div><button class="secondary" id="copy-invite">Sao chép lời mời ↗</button></div>
-    <p class="lobby-description">Mời thêm bạn hoặc bắt đầu ngay khi đã sẵn sàng.</p>
+    <div class="lobby-heading"><h1>Phòng chờ</h1><div class="lobby-icons"><button class="icon-button" data-dialog="room-details-dialog" aria-label="Thông tin phòng" title="Thông tin phòng">ⓘ</button><button class="icon-button" data-dialog="people-dialog" aria-label="Xem người chơi" title="Xem tất cả người chơi">♟</button><button class="icon-button" data-dialog="settings-dialog" aria-label="Cài đặt phòng chờ" title="Cài đặt">⚙</button></div></div>
+    <div class="room-code-card"><div><span>MÃ PHÒNG</span><strong id="lobby-code">------</strong></div><button class="secondary" id="copy-invite" aria-label="Sao chép lời mời" title="Sao chép lời mời">⧉</button></div>
+    <p id="lobby-mode-line"></p><p class="lobby-description" hidden>Mời thêm bạn hoặc bắt đầu ngay khi đã sẵn sàng.</p>
     <div id="player-slots"></div>
-    <div class="bot-note"><span>✿</span><div><b>Cuộc phiêu lưu đang chờ bạn</b><small>Mỗi trận có 8 nhân vật cùng tranh tài</small></div><span>✦</span></div>
-    <button class="primary" id="ready">Mình sẵn sàng! ✓</button>
+    <div class="bot-note" hidden><span>✿</span><div><b>Cuộc phiêu lưu đang chờ bạn</b><small>Mỗi trận có 8 nhân vật cùng tranh tài</small></div><span>✦</span></div>
+    <div class="lobby-actions"><button class="primary" id="ready">Mình sẵn sàng! ✓</button>
     <button class="secondary full" id="start" disabled>Chờ mọi người sẵn sàng</button>
-    <div class="lobby-bottom"><span id="lobby-count">1/3 bạn đã vào phòng</span><button class="text-button" id="leave-lobby">Rời phòng</button></div>
+    </div><div class="lobby-bottom"><span id="lobby-count">1/3 bạn đã vào phòng</span><button class="text-button" id="leave-lobby">Rời phòng</button></div>
   </section>
 
   <section id="hud" hidden>
@@ -106,7 +106,7 @@
     <label class="setting-check"><input id="invert-setting" type="checkbox">Đảo chiều nhìn lên / xuống</label>
     <label class="setting-check"><input id="sound-setting" type="checkbox">Bật âm thanh</label>
     <label class="setting-field" for="volume-setting">Âm lượng <output id="volume-value">70%</output><input id="volume-setting" type="range" min="0" max="100" step="5" value="70"></label>
-    <button id="edit-hud" class="secondary full">Chỉnh bố cục UI · Kéo, đổi cỡ, độ mờ ↗</button><p class="dialog-note hud-settings-note">Xem trước các nút ngay cả khi chưa vào trận. Lưu riêng bố cục dọc và ngang trên thiết bị này.</p>
+    <button id="edit-hud" class="secondary full">Chỉnh bố cục UI · Kéo, đổi cỡ, độ mờ ↗</button><p class="dialog-note hud-settings-note">Xem trước các nút ngay cả khi chưa vào trận. Lưu bố cục ngang trên thiết bị này. Điện thoại cần xoay ngang.</p>
     <p class="dialog-note">Tùy chỉnh được lưu trên thiết bị này. Chọn “Nhẹ máy” nếu hình ảnh bị giật hoặc máy nóng.</p><p class="live-match-note" hidden>Trận vẫn tiếp diễn khi mở hướng dẫn hoặc cài đặt.</p><button class="primary" data-close-dialog>Xong · Quay lại</button>
   </dialog>
   <div id="hud-safe" aria-hidden="true"></div>
@@ -127,6 +127,10 @@
   <div id="version-notice" role="status" hidden><span>Có phiên bản mới</span><button id="refresh-version">Tải bản mới</button></div>
   <div id="toast" role="status" hidden></div>
   <div id="fatal" hidden><div><h2>Chưa mở được đảo 3D</h2><p id="fatal-message"></p><button class="primary" onclick="location.reload()">Thử lại</button></div></div>
-  <script type="module" src="/client.js"></script>
+  <section id="mouse-gate" hidden><div class="mouse-gate-card"><h2>Khóa chuột để vào trận</h2><p id="mouse-lock-status">Rê chuột để điều khiển tâm ngắm. Bấm nút bên dưới để bắt đầu.</p><button id="capture-mouse" class="primary">Vào trận · Khóa chuột</button><small>Esc mở con trỏ · Tab cài đặt. Trận vẫn tiếp diễn.</small></div></section>
+  <dialog id="room-details-dialog" class="game-dialog" aria-labelledby="room-details-title"><button class="dialog-close" data-close-dialog aria-label="Đóng thông tin phòng">×</button><h2 id="room-details-title">Thông tin phòng</h2><dl class="room-facts"><dt>Bản đồ</dt><dd id="detail-map"></dd><dt>Số chỗ</dt><dd id="detail-capacity"></dd><dt>Chế độ</dt><dd id="detail-mode"></dd><dt>Thời gian</dt><dd id="detail-duration"></dd></dl><p class="dialog-note">Gửi mã phòng hoặc lời mời cho bạn bè. Mọi người vào phòng và bấm sẵn sàng, rồi chủ phòng bắt đầu.</p><button class="primary" data-close-dialog>Đóng</button></dialog>
+  <dialog id="people-dialog" class="game-dialog" aria-labelledby="people-title"><button class="dialog-close" data-close-dialog aria-label="Đóng danh sách người chơi">×</button><h2 id="people-title">Người chơi trong phòng</h2><ul id="people-details" class="people-details"></ul><button class="primary" data-close-dialog>Đóng</button></dialog>
+  <script type="module" src="/client.js"></script></div>
+  <section id="rotate-gate" role="dialog" aria-modal="true" aria-labelledby="rotate-title" hidden><div><svg class="rotate-phone" viewBox="0 0 120 120" aria-hidden="true"><rect x="36" y="22" width="48" height="76" rx="8" transform="rotate(90 60 60)"/><path d="M16 55a45 45 0 0 1 70-30m0-11v13H73M104 65a45 45 0 0 1-70 30m0 11V93h13"/></svg><h2 id="rotate-title" tabindex="-1">Xoay ngang để lên đảo</h2><p>Game chỉ hỗ trợ màn hình ngang trên điện thoại. Xoay máy để tiếp tục nhé.</p></div></section>
 </body>
 </html>

@@ -3,7 +3,7 @@ export function createMouseLock({canvas,doc=document,isPlayable,rotate,resetInpu
   let pending=false,failed=false;
   const locked=()=>doc.pointerLockElement===canvas;
   const sync=()=>{pending=false;doc.body.classList.toggle('mouse-locked',locked());resetInput();};
-  const fail=error=>{pending=false;failed=true;if(error?.name)console.warn(`Pointer lock: ${error.name}: ${error.message||''}`);notify('Trình duyệt chưa cho khóa chuột. Bạn vẫn có thể giữ chuột phải để xoay; thử mở game trực tiếp trong Chrome hoặc Edge.');};
+  const fail=error=>{pending=false;failed=true;if(error?.name)console.warn(`Pointer lock: ${error.name}: ${error.message||''}`);notify('Trình duyệt chưa cho khóa chuột. Hãy mở game trực tiếp trong Chrome hoặc Edge để điều khiển tâm ngắm.');};
   doc.addEventListener('pointerlockchange',sync);
   doc.addEventListener('pointerlockerror',()=>{if(!failed)fail();});
   doc.addEventListener('mousemove',event=>{if(locked()&&isPlayable())rotate(event.movementX||0,event.movementY||0);});

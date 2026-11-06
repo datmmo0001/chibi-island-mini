@@ -1,0 +1,20 @@
+/* Portrait is a blocking state, rather than a second phone play layout. */
+#rotate-gate{position:fixed;inset:0;z-index:100;background:#edf5e5;display:grid;place-items:center;padding:24px;color:#315c46;text-align:center}
+#rotate-gate>div{max-width:360px}.rotate-phone{width:108px;height:108px;fill:none;stroke:#477d60;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+#rotate-gate h2{font-size:24px;margin:16px 0 10px;letter-spacing:-.7px}#rotate-gate p{font-size:14px;line-height:1.6;color:#71836b}
+.portrait-blocked #game-ui{visibility:hidden}.portrait-blocked{overflow:hidden!important}
+#mouse-gate{position:fixed;inset:0;z-index:8;display:grid;place-items:center;background:#173d3a2b;pointer-events:none}
+.mouse-gate-card{width:min(360px,80vw);padding:20px;border:1px solid #fff9;border-radius:18px;background:#f6f9edea;box-shadow:0 10px 50px #173d3a44;text-align:center;pointer-events:auto;color:#315d44}
+.mouse-gate-card h2{font-size:20px;margin:0 0 9px}.mouse-gate-card p{font-size:12px;line-height:1.5;margin:8px 0 14px}.mouse-gate-card small{font-size:10px;color:#6b8066;display:block;margin-top:10px}.mouse-locked.playing,.mouse-locked.playing *{cursor:none!important}
+#hud #mouse-lock-hint{display:none}
+/* One compact lobby card. Details open only on demand. */
+.lobby-mode #header{display:none}#lobby.overlay-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(540px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 28px);margin:0;padding:18px;display:grid;gap:10px;overflow:hidden;border-radius:20px}
+.lobby-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}#lobby h1{font-size:22px;line-height:1.1;letter-spacing:-.7px;margin:0}.lobby-icons{display:flex;gap:7px}#lobby .icon-button{width:32px;height:32px;font-size:18px}
+#lobby .room-code-card{padding:8px 12px;min-height:48px;border-radius:10px}#lobby .room-code-card strong{font-size:23px;letter-spacing:4px}#lobby #copy-invite{width:34px;min-height:32px;padding:2px;font-size:20px}
+#lobby-mode-line{font-size:11px;color:#71856b;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lobby #player-slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;max-height:none;overflow:hidden}
+#lobby .player-slot{padding:6px;border:1px solid #dce5d1;border-radius:9px;gap:5px;min-width:0;background:#f1f5e8}
+#lobby .player-avatar{width:22px;height:24px;font-size:18px;border-radius:6px;flex:0 0 22px}#lobby .player-details b{font-size:10px;white-space:nowrap}#lobby .player-details small{display:none}#lobby .player-ready{font-size:0;padding:0;flex:0 0 8px;height:8px;width:8px;border-radius:50%;background:#d5b66b}#lobby .player-ready.yes{background:#5b9b70}#lobby .player-slot.empty{opacity:.55}
+.lobby-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}#lobby .lobby-actions button{min-height:37px;height:37px;margin:0;font-size:11px;padding:6px;box-shadow:none;white-space:normal}#lobby .lobby-bottom{margin:0;font-size:11px;min-height:22px}#lobby .text-button{font-size:11px;padding:3px}
+.room-facts{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;font-size:13px}.room-facts dt{color:#7e8e74}.room-facts dd{margin:0;font-weight:650}.people-details{list-style:none;padding:0;margin:16px 0;max-height:45dvh;overflow:auto}.people-details li{padding:9px 0;border-bottom:1px solid #dce6d5;font-size:12px}
+@media(max-height:420px){#lobby.overlay-panel{padding:12px 16px;gap:7px}#lobby h1{font-size:19px}#lobby .room-code-card{min-height:40px;padding:5px 10px}#lobby .room-code-card strong{font-size:20px}#lobby .icon-button{width:28px;height:28px;font-size:16px}#lobby-mode-line{font-size:10px}#lobby .player-slot{padding:4px}#lobby .player-avatar{height:20px;font-size:16px}#lobby .lobby-actions button{min-height:33px;height:33px}#lobby .lobby-bottom{min-height:18px}.mouse-gate-card{padding:14px}}
