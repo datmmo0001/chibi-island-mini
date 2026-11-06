@@ -1,11 +1,18 @@
 # Các bản cập nhật
 
+## 0.6.4 — Chơi ngang, khóa chuột và màn chờ gọn
+
+- Chặn giao diện và thao tác khi điện thoại để dọc, tiếp tục khi xoay ngang. PC bắt buộc khóa chuột trước khi điều khiển tâm, Esc mở chuột.
+- Màn chờ một khung, chi tiết phòng và người chơi mở bằng icon.
+- 52 kiểm thử qua; giữ nguyên phòng 3/5/20, kỹ năng và các map.
+
+
 ## 0.6.3 — Bố cục theo ảnh, tường đấu trường, phòng 5 người — bản thử local
 
 - Bố cục ngang theo ảnh 3.jpg: ngắm ở trái phía trên cần di chuyển; tiện ích và số người cùng hàng phía trên; máu/hồi phục/súng ở dưới lệch trái tâm màn hình; nhặt/chạy ở phía trên nút bắn; kỹ năng ở trên-trái nút bắn; nạp ở trái nút nhảy. Giữ nút bắn 61,6 px (nhỏ hơn 30% bản 0.6.1). Đổi súng đặt cạnh UI súng. Bố cục dọc và màn ngang hẹp được điều chỉnh để các vùng chạm không chồng nhau. Khóa lưu UI mới, giữ các bản lưu cũ để quay lại nếu cần.
 - Đảo Kẹo thêm tám đoạn tường hộp cao 3,3 m, có va chạm thật và chặn đường đạn quét 3D của cả bốn loại súng. Tường không bị bắn vỡ; các kỹ năng xuyên phá vẫn giữ cơ chế riêng.
 - Thay ô 20 người bằng danh sách Số người chơi: 3 hoặc 5 trên mọi map, 20 riêng Rừng Gió. Năm người thật cùng phòng, thêm ba đối thủ cho đủ tám nhân vật. Giới hạn người do server xác thực.
-- 50 kiểm tra qua, gồm năm kết nối riêng cùng vào từng map, giới hạn người thứ sáu, cả bốn loại súng bị tường chặn và bố cục dọc/ngang/vùng an toàn. Đã kiểm tra phòng chờ 1/5, map/tường trong trình duyệt, 18 UI khung 915×412 không chồng và không có lỗi JavaScript. Chưa triển khai Render.
+- 50 kiểm tra qua, gồm năm kết nối riêng cùng vào từng map, giới hạn người thứ sáu, cả bốn loại súng bị tường chặn và bố cục dọc/ngang/vùng an toàn. Đã kiểm tra phòng chờ 1/5, map/tường trong trình duyệt, 18 UI khung 915×412 không chồng và không có lỗi JavaScript. Đã triển khai Render và kiểm tra thành công ba kết nối HTTPS/WSS ngày 06/11/2026.
 
 ## 0.6.2 — Đảo Kẹo mở rộng và sửa hồi sinh — bản thử local
 

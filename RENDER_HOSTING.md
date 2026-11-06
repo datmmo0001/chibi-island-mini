@@ -1,6 +1,13 @@
 # Game trên Render — link cố định
 
-> **Bản phát hành 0.6.3 đã được người dùng duyệt để cập nhật lên link cố định. Phiên bản đang chạy xem tại /health.**
+## Mới ở bản 0.6.4
+
+- Điện thoại chỉ chơi ngang. Xoay dọc sẽ che toàn bộ giao diện và ngừng gửi thao tác; trận online vẫn tiếp diễn.
+- PC bấm Vào trận / Khóa chuột để điều khiển tâm bắn. Con trỏ được ẩn khi khóa, Esc mở chuột, Tab cài đặt. Nếu trình duyệt từ chối thì mở trực tiếp trong Chrome/Edge; không còn chế độ kéo chuột tự do thay thế.
+- Màn chờ gọn trong một khung ngang. Icon thông tin mở map/chế độ; icon người mở danh sách đầy đủ; bánh răng mở cài đặt. Bản tóm tắt hiện tối đa tám thẻ người, phần chi tiết luôn đủ mọi người.
+
+
+> **Bản phát hành 0.6.4 đã được người dùng duyệt để cập nhật lên link cố định. Phiên bản đang chạy xem tại /health.**
 
 
 ## Bản thử 0.6.0 — Đảo Rừng Gió
@@ -21,7 +28,7 @@
 - Workspace Render: datpro88.
 - Dịch vụ: chibi-island-mini, Docker, **Free**, **Singapore**, một instance.
 - Kiểm tra sức khỏe: https://chibi-island-mini.onrender.com/health
-- Phiên bản Live trên Render: **0.4.0**. Xem /health và Dashboard để kiểm tra bản Live.
+- Phiên bản Live trên Render: **0.6.3**. Xem /health và Dashboard để kiểm tra bản Live.
 - Mỗi đợt nâng cấp chỉ bàn giao sau khi deploy mới báo Live và qua kiểm tra ba kết nối.
 
 ## Đã kiểm tra

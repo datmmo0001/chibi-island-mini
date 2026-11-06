@@ -1,6 +1,6 @@
 # Working on Chibi Island
 
-CURRENT REQUEST: the user approved preview 0.6.3 and explicitly requested publishing it to the existing fixed Render URL on 2026-11-06. Upload the coherent release and deploy it now. Future feature changes should be previewed locally before publication unless the user authorizes otherwise. Verify the live version before reporting completion.
+CURRENT STATUS: Version 0.6.3 has been published to Render and verified Live on 2026-11-06 via /health, /version, and tests/public-smoke.mjs with three HTTPS/WSS clients. Future feature changes should be previewed locally before publication unless the user authorizes otherwise. Verify the live version before reporting completion.
 
 - Project: this directory. Preserve the original game_development_plan.md in the parent directory.
 - Public game: https://chibi-island-mini.onrender.com
