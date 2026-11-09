@@ -321,8 +321,8 @@ export class IslandScene {
   }
   updatePreview(outfit,hat,players=null,selfId=null){
     for(const child of [...this.preview.children]){this.preview.remove(child);this.dispose(child);}
-    const selections=players?players.map(p=>({outfit:p.outfit,hat:p.hat,mine:p.id===selfId})):[{outfit:'bunny',hat:'ears'},{outfit,hat,mine:true},{outfit:'duck',hat:'ears'}];
-    selections.forEach((p,i)=>{const a=avatar(p.outfit,p.hat);a.position.set((i-(selections.length-1)/2)*4.5,.05,8+(p.mine?1:-.3));a.scale.setScalar(p.mine?2.25:1.95);a.rotation.y=i===0?.16:-.15;this.preview.add(a);});
+    const selections=players?players.map(p=>({outfit:p.outfit,hat:p.hat,mine:p.id===selfId})):[{outfit,hat,mine:true}];
+    selections.forEach((p,i)=>{const a=avatar(p.outfit,p.hat);if(players){a.position.set((i-(selections.length-1)/2)*4.5,.05,8+(p.mine?1:-.3));a.scale.setScalar(p.mine?2.25:1.95);a.rotation.y=i===0?.16:-.15;}else{a.position.set(11,.05,10);a.scale.setScalar(2.6);a.rotation.y=-.18;a.userData.lobbyHero=true;}this.preview.add(a);});
   }
   resize(){this.width=innerWidth;this.height=innerHeight;this.renderer.setSize(this.width,this.height,false);}
   configure({quality='auto',sensitivity=1,invertY=false}={}){
@@ -422,7 +422,7 @@ export class IslandScene {
     }else{
       this.camera=this.previewCamera;let span=22;if(mobile&&this.mode==='home'){viewportHeight=Math.min(420,this.height*.57);span=14;this.desiredTarget.set(0,0,1);}else this.desiredTarget.set(mobile?0:-13,0,3);
       this.target.lerp(this.desiredTarget,1-Math.exp(-dt*3));const ratio=this.width/viewportHeight;this.camera.left=-span*ratio;this.camera.right=span*ratio;this.camera.top=span;this.camera.bottom=-span;this.camera.updateProjectionMatrix();this.camera.position.set(this.target.x,35,this.target.z+28);this.camera.lookAt(this.target);
-      this.preview.children.forEach((a,i)=>{a.position.y=.05+Math.sin(t*2+i)*.045;a.rotation.z=Math.sin(t*1.5+i)*.018;});
+      const heroSpan=span*1.164;this.preview.children.forEach((a,i)=>{a.position.y=.05+Math.sin(t*2+i)*.045;a.rotation.z=Math.sin(t*1.5+i)*.018;if(a.userData.lobbyHero){a.updateWorldMatrix(true,true);const bb=new THREE.Box3().setFromObject(a),hh=bb.max.y-bb.min.y;if(hh>.1){const k=heroSpan/hh;if(Math.abs(k-1)>.02)a.scale.multiplyScalar(k);}}});
     }
     this.camera.updateMatrixWorld();
     for(const b of this.projectiles.values()){const d=b.userData,elapsed=Math.min(.08,t-d.at),speed=d.speed||WEAPONS[d.weapon]?.speed||58;b.position.set(d.x+d.vx*speed*elapsed,d.y+d.vy*speed*elapsed,d.z+d.vz*speed*elapsed);}

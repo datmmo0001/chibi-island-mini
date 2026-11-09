@@ -360,3 +360,5 @@ world.onLocalShot=()=>{clearTimeout(firingTimer);$('crosshair').classList.add('f
 renderOutfits(); world.updatePreview(outfit, hat); updateSound(); connect(); requestAnimationFrame(frame);
 
 $('chat-send').onclick=()=>{if(send({type:'chat',name:$('player-name').value,message:$('chat-message').value}))$('chat-message').value='';};
+$('chat-message').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();$('chat-send').click();}});
+$('chat-focus').onclick=()=>$('chat-message').focus();

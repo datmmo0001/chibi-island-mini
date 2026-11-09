@@ -67,3 +67,33 @@ body:not(.playing):not(.lobby-mode) #header{height:60px;padding:10px 22px}
 .audio-preview{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0}.audio-preview span{width:100%;font-size:12px}.audio-preview button{border:1px solid #cddbc9;border-radius:8px;padding:7px;background:#f2f7eb;color:#315c46;font-size:11px}#lobby .player-slot[data-team="1"]{border-color:#52b6dd}#lobby .player-slot[data-team="2"]{border-color:#eaa06b}#team-choice{font-size:12px}#team-choice select{margin:8px;padding:7px}
 
 #appearance-dialog{width:min(640px,calc(100vw - 28px))}#appearance-dialog .outfit-list{grid-template-columns:repeat(4,minmax(0,1fr))}#appearance-dialog .outfit{min-width:0}#appearance-dialog .outfit span{font-size:9px;display:block}#appearance-dialog .outfit svg{height:72px;width:68px}@media(max-height:420px){#appearance-dialog .outfit svg{height:52px;width:50px}#appearance-dialog .outfit-list{gap:6px}}
+
+/* Lobby refresh (Ken 2026-11-09): play card on the left, online-chat panel
+   beside it at the exact same height with the input row pinned to the bottom,
+   the map tag/heading beside the logo in the header, and the player's own
+   selected character standing in the open 3D area on the right. */
+#home{display:flex;gap:16px;align-items:stretch}
+#home .welcome{position:relative;right:auto;top:auto;flex:0 0 min(460px,38vw);width:auto;height:100%;margin:0;display:block}
+#home .play-card{height:100%;align-content:start}
+.chat-card{pointer-events:auto;flex:0 1 400px;min-width:280px;min-height:0;display:flex;flex-direction:column;background:#fffef6ed;border:1px solid #fff;box-shadow:0 16px 45px #40603c0c;border-radius:22px;backdrop-filter:blur(12px);padding:16px}
+.chat-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.chat-heading h2{margin:0;font-size:14px;letter-spacing:-.3px}
+.chat-live{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:#4f7d5a;background:#e8f3e2;border-radius:20px;padding:5px 9px}
+.chat-card .home-chat{flex:1;display:flex;flex-direction:column;min-height:0;margin:0;border:0;padding:0;background:none}
+.chat-card #online-chat{flex:1;min-height:0;max-height:none;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px 2px;font-size:12px;line-height:1.5;color:#41604c}
+.chat-card #online-chat>div{background:#f1f6e9;border:1px solid #e3ead6;border-radius:10px;padding:6px 9px;overflow-wrap:anywhere}
+.chat-input-row{display:flex;gap:8px;margin-top:10px;flex:0 0 auto}
+.chat-input-row input{flex:1;min-width:0}
+.chat-input-row button{border:0;border-radius:10px;background:var(--coral);color:#fffdf6;font-weight:750;font-size:12px;padding:0 18px;min-height:41px;cursor:pointer}
+.chat-input-row button:hover{background:#ed7865}
+#header .island-caption{position:static;left:auto;top:auto;transform:none;width:auto;text-align:left;display:flex;flex-direction:row;align-items:center;gap:12px;margin-right:auto;pointer-events:none}
+#header .floating-tag{padding:6px 11px;box-shadow:none}
+#header .island-caption h2{font-size:15px;line-height:1.15;margin:0;letter-spacing:-.4px}
+#header .island-caption p,#header .island-coordinate{display:none}
+@media(max-width:700px){
+#header .island-caption h2{display:none}
+#home{flex-direction:column;overflow-y:auto}
+#home .welcome{flex:0 0 auto;width:100%;height:auto}
+#home .play-card{height:auto}
+.chat-card{flex:0 0 300px;width:100%;min-width:0}
+}
