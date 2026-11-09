@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#edf8ef">
+  <meta name="theme-color" content="#edf8ef" media="(prefers-color-scheme: light)">
   <meta name="description" content="Đảo nhỏ, niềm vui lớn. Chơi ngay hoặc rủ bạn cùng đấu súng nước trên Chibi Island.">
   <title>Chibi Island · Đảo nhỏ, niềm vui lớn</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -19,6 +19,15 @@
     <div class="header-right"><span class="connection" id="connection"><i></i> Đang kết nối…</span><button class="icon-button" id="home-fullscreen" aria-label="Toàn màn hình" title="Toàn màn hình">⛶</button><span class="build" id="build-label">0.4</span><button class="icon-button menu-open" data-dialog="guide-dialog" aria-label="Cách chơi" title="Cách chơi">?</button><button class="icon-button menu-open" data-dialog="settings-dialog" aria-label="Cài đặt" title="Cài đặt">⚙</button><button class="icon-button" id="music" aria-label="Tắt nhạc nền" title="Nhạc nền phòng chờ">♫</button><button class="icon-button" id="sound" aria-label="Bật âm thanh" title="Bật/tắt hiệu ứng">♪</button></div>
   </header>
 
+  <section id="login-screen" aria-label="Man hinh vao game">
+    <div class="login-card">
+      <div class="login-logo"><span class="login-mark">✿</span><h1>chibi<span>island</span></h1><p>ĐẢO NHỎ, NIỀM VUI LỚN</p></div>
+      <label class="login-label" for="login-name">Tên nhân vật</label>
+      <input id="login-name" maxlength="18" placeholder="Nhập tên của bạn..." autocomplete="nickname">
+      <button type="button" id="login-enter">VÀO ĐẢO →</button>
+      <p class="login-note">Phiên bản 0.7.2 · Không cần mật khẩu</p>
+    </div>
+  </section>
   <main id="home">
     <section class="welcome">
       <div class="play-card">

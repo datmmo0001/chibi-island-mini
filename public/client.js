@@ -43,6 +43,7 @@ let mouseLock, playGuard, scoped=false;
 let audio = null, menus, soundEnabled = safeStore.get('chibi-sound', 'off') === 'on', musicEnabled = safeStore.get('chibi-music','on')==='on', latency = 0, resumed = false;
 let lastHealth = null, damageTimer, firingTimer, feedSignature = '', compassAt = 0;
 $('player-name').value = safeStore.get('chibi-name');
+  $('login-name').value = safeStore.get('chibi-name');
 const invitedRoom = new URL(location.href).searchParams.get('room'); if (invitedRoom) $('room-code').value = invitedRoom.toUpperCase().slice(0, 6);
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4200); }
 function send(data) { if (ws?.readyState !== WebSocket.OPEN) { toast('Đang kết nối lại máy chủ. Chờ một chút nhé.'); return false; } ws.send(JSON.stringify(data)); return true; }
@@ -357,6 +358,10 @@ menus=createMenus({world,store:safeStore,resetInput:()=>{mouseLock.release();res
 playGuard=createPlayGuard({mouseLock,resetInput,getPhase:()=>state?.phase,isAlive:()=>!!state?.players.find(p=>p.id===identity)?.alive,menusOpen:()=>!!menus?.isOpen()});
 createFullscreen({button:$('fullscreen-toggle'),buttons:[$('home-fullscreen'),$('lobby-fullscreen'),$('rotate-fullscreen')],notify:toast,resetInput});
 world.onLocalShot=()=>{clearTimeout(firingTimer);$('crosshair').classList.add('firing');firingTimer=setTimeout(()=>$('crosshair').classList.remove('firing'),90);tone(740+Math.random()*80,.07,.025);};
+// Login gate (Free Fire style): name + one enter button, then the lobby.
+function enterIsland(){const n=$('login-name').value.trim();if(!n){toast('Đặt tên trước khi lên đảo nhé.');$('login-name').focus();return;}$('player-name').value=n;safeStore.set('chibi-name',n);initAudio();const s=$('login-screen');s.classList.add('login-done');setTimeout(()=>{s.hidden=true;},380);}
+$('login-enter').onclick=enterIsland;
+$('login-name').addEventListener('keydown',e=>{if(e.key==='Enter')enterIsland();});
 renderOutfits(); world.updatePreview(outfit, hat); updateSound(); connect(); requestAnimationFrame(frame);
 
 $('chat-send').onclick=()=>{if(send({type:'chat',name:$('player-name').value,message:$('chat-message').value}))$('chat-message').value='';};

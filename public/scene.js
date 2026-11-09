@@ -322,7 +322,7 @@ export class IslandScene {
   updatePreview(outfit,hat,players=null,selfId=null){
     for(const child of [...this.preview.children]){this.preview.remove(child);this.dispose(child);}
     const selections=players?players.map(p=>({outfit:p.outfit,hat:p.hat,mine:p.id===selfId})):[{outfit,hat,mine:true}];
-    selections.forEach((p,i)=>{const a=avatar(p.outfit,p.hat);if(players){a.position.set((i-(selections.length-1)/2)*4.5,.05,8+(p.mine?1:-.3));a.scale.setScalar(p.mine?2.25:1.95);a.rotation.y=i===0?.16:-.15;}else{a.position.set(11,.05,10);a.scale.setScalar(2.6);a.rotation.y=-.18;a.userData.lobbyHero=true;}this.preview.add(a);});
+    selections.forEach((p,i)=>{const a=avatar(p.outfit,p.hat);if(players){a.position.set((i-(selections.length-1)/2)*4.5,.05,8+(p.mine?1:-.3));a.scale.setScalar(p.mine?2.25:1.95);a.rotation.y=i===0?.16:-.15;}else{a.position.set(11,.05,10);a.scale.setScalar(2.6);a.rotation.y=0;a.userData.lobbyHero=true;}this.preview.add(a);});
   }
   resize(){this.width=innerWidth;this.height=innerHeight;this.renderer.setSize(this.width,this.height,false);}
   configure({quality='auto',sensitivity=1,invertY=false}={}){
@@ -393,7 +393,7 @@ export class IslandScene {
   }
   splash(x,y,z,color,count){if(this.lowDetail)count=Math.ceil(count/2);for(let i=0;i<count;i++){const o=sphere(.07+Math.random()*.1,color,this.scene,x,y,z,6);o.castShadow=false;this.particles.push({o,vx:(Math.random()-.5)*5,vy:2+Math.random()*3,vz:(Math.random()-.5)*5,life:.6});}}
   frame(dt){
-    this.clock+=dt;const t=this.clock,mobile=this.width<=700,playing=this.mode==='playing';let viewportHeight=this.height;
+    this.clock+=dt;const t=this.clock,mobile=this.width<=700,playing=this.mode==='playing';let viewportHeight=this.height;;const stage=null;const useStage=false;
     const me=this.state?.players.find(p=>p.id===this.selfId),gun=me?.inventory?.[me.slot||0];
     if(this.state?.phase==='playing'&&me?.alive&&this.localInput.fire&&gun&&me.reload<=0&&(!this.map.survival||gun.mag>0)&&t>=this.nextLocalShot){
       this.nextLocalShot=t+WEAPONS[gun.id].interval;const model=this.actors.get(this.selfId);if(model)model.userData.flashUntil=t+.07;this.onLocalShot?.(gun.id);
@@ -421,8 +421,13 @@ export class IslandScene {
       this.sun.position.set(pos.x-23,pos.y+40,pos.z+20);this.sun.target.position.set(pos.x,0,pos.z);
     }else{
       this.camera=this.previewCamera;let span=22;if(mobile&&this.mode==='home'){viewportHeight=Math.min(420,this.height*.57);span=14;this.desiredTarget.set(0,0,1);}else this.desiredTarget.set(mobile?0:-13,0,3);
+      if(useStage){this.desiredTarget.set(11,0,10);}
+      if(useStage&&this.preview.children.length){const hero=this.preview.children.find(a=>a.userData.lobbyHero);if(hero){hero.updateWorldMatrix(true,true);const hb=new THREE.Box3().setFromObject(hero);if(isFinite(hb.min.x)&&isFinite(hb.max.x))this.desiredTarget.set((hb.min.x+hb.max.x)/2,0,(hb.min.z+hb.max.z)/2);}}
       this.target.lerp(this.desiredTarget,1-Math.exp(-dt*3));const ratio=this.width/viewportHeight;this.camera.left=-span*ratio;this.camera.right=span*ratio;this.camera.top=span;this.camera.bottom=-span;this.camera.updateProjectionMatrix();this.camera.position.set(this.target.x,35,this.target.z+28);this.camera.lookAt(this.target);
-      const heroSpan=span*1.164;this.preview.children.forEach((a,i)=>{a.position.y=.05+Math.sin(t*2+i)*.045;a.rotation.z=Math.sin(t*1.5+i)*.018;if(a.userData.lobbyHero){a.updateWorldMatrix(true,true);const bb=new THREE.Box3().setFromObject(a),hh=bb.max.y-bb.min.y;if(hh>.1){const k=heroSpan/hh;if(Math.abs(k-1)>.02)a.scale.multiplyScalar(k);}}});
+      // Lobby hero is exactly 2x its in-game size (Ken 2026-11-09): the
+      // classic lobby framing showed it at heroSpan/span x baseHeight with
+      // baseHeight ~= 2.57 world units, so 2x in-game = span * (2*2.57/22).
+      const heroSpan=span*0.2336;this.preview.children.forEach((a,i)=>{a.position.y=.05+Math.sin(t*2+i)*.045;a.rotation.z=Math.sin(t*1.5+i)*.018;if(a.userData.lobbyHero){a.updateWorldMatrix(true,true);const bb=new THREE.Box3().setFromObject(a),hh=bb.max.y-bb.min.y;if(hh>.1){const k=heroSpan/hh;if(Math.abs(k-1)>.02)a.scale.multiplyScalar(k);}}});
     }
     this.camera.updateMatrixWorld();
     for(const b of this.projectiles.values()){const d=b.userData,elapsed=Math.min(.08,t-d.at),speed=d.speed||WEAPONS[d.weapon]?.speed||58;b.position.set(d.x+d.vx*speed*elapsed,d.y+d.vy*speed*elapsed,d.z+d.vz*speed*elapsed);}
@@ -431,6 +436,6 @@ export class IslandScene {
     for(const[id,o]of this.pickupMeshes){o.position.y=.4+Math.sin(t*2.3+id)*.12;o.rotation.y=t*.5;}
     for(const[id,g]of this.obstacleMeshes){const o=g.userData.obstacle;g.visible=!this.obstacleStates.get(id)?.destroyed&&Math.hypot(o.x-this.target.x,o.z-this.target.z)<(playing?(this.scoped?240:140):80);if(g.userData.leaves){const inside=me&&obstacleContains(o,me.x,me.z)&&me.y<o.h;for(const leaf of g.userData.leaves){leaf.material.transparent=!!inside;leaf.material.opacity=inside?.23:1;leaf.material.depthWrite=!inside;}}}
     this.particles=this.particles.filter(p=>{p.life-=dt;p.vy-=dt*10;p.o.position.x+=p.vx*dt;p.o.position.y+=p.vy*dt;p.o.position.z+=p.vz*dt;p.o.scale.multiplyScalar(Math.exp(-dt*2));if(p.life<=0){this.scene.remove(p.o);p.o.geometry.dispose();return false;}return true;});
-    this.zone.visible=playing;this.zoneWall.visible=playing;this.renderer.setViewport(0,0,this.width,this.height);this.renderer.clear();this.renderer.setViewport(0,this.height-viewportHeight,this.width,viewportHeight);this.renderer.render(this.scene,this.camera);
+    this.zone.visible=playing;this.zoneWall.visible=playing;this.renderer.setViewport(0,0,this.width,this.height);this.renderer.clear();this.renderer.setViewport(0,this.height-viewportHeight,this.width,viewportHeight);if(useStage&&!playing){const hb=Math.max(1,stage.y);this.renderer.setScissorTest(true);this.renderer.setScissor(0,this.height-hb,this.width,hb);this.renderer.render(this.scene,this.camera);this.renderer.setScissorTest(false);}else this.renderer.render(this.scene,this.camera);if(useStage&&!playing){this.camera.aspect=stage.width/stage.height;this.camera.updateProjectionMatrix();this.renderer.setScissorTest(true);this.renderer.setScissor(stage.x,this.height-stage.y-stage.height,stage.width,stage.height);this.renderer.setViewport(stage.x,this.height-stage.y-stage.height,stage.width,stage.height);this.renderer.render(this.scene,this.camera);this.renderer.setScissorTest(false);}
   }
 }

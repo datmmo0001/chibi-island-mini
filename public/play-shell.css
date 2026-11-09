@@ -21,7 +21,7 @@
 
 /* Preparation stays inside the available landscape viewport, including browser chrome. */
 body:not(.playing){height:100dvh;overflow:hidden}
-body:not(.playing):not(.lobby-mode) #header{height:60px;padding:10px 22px}
+body:not(.playing):not(.lobby-mode) #header{min-height:60px;padding:10px 22px}
 #home{position:fixed;inset:60px 16px 14px!important;overflow:hidden}
 #home .welcome{position:absolute;right:0;top:0;width:min(460px,54vw);height:100%;margin:0;display:grid;align-items:center}
 #home .play-card{display:grid;grid-template-columns:1fr 1fr;gap:7px 10px;padding:16px;max-height:100%;overflow:hidden}
@@ -97,3 +97,93 @@ body:not(.playing):not(.lobby-mode) #header{height:60px;padding:10px 22px}
 #home .play-card{height:auto}
 .chat-card{flex:0 0 300px;width:100%;min-width:0}
 }
+/* Phone fit pass (Ken 2026-11-09): the lobby/home must stay balanced on real
+   phones - honor notch / punch-hole / gesture-bar insets everywhere the UI
+   touches an edge, and give narrow screens a genuinely designed portrait
+   layout instead of a squeezed desktop one. The portrait gate still asks
+   the player to rotate for a match; the lobby itself now fits portrait. */
+body:not(.playing) #header{height:auto;min-height:0;padding-top:calc(10px + env(safe-area-inset-top,0px));padding-left:calc(22px + env(safe-area-inset-left,0px));padding-right:calc(22px + env(safe-area-inset-right,0px))}
+#home{top:calc(108px + env(safe-area-inset-top,0px))!important;left:calc(16px + env(safe-area-inset-left,0px))!important;right:calc(16px + env(safe-area-inset-right,0px))!important;bottom:calc(14px + env(safe-area-inset-bottom,0px))!important}
+@media(max-height:440px){body:not(.playing):not(.lobby-mode) #header{padding-top:calc(6px + env(safe-area-inset-top,0px))}#home{top:calc(46px + env(safe-area-inset-top,0px))!important;left:calc(12px + env(safe-area-inset-left,0px))!important;right:calc(12px + env(safe-area-inset-right,0px))!important;bottom:calc(8px + env(safe-area-inset-bottom,0px))!important}}
+.lobby-mode #home{display:none}
+#lobby.overlay-panel{padding-top:calc(18px + env(safe-area-inset-top,0px));padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));padding-left:calc(18px + env(safe-area-inset-left,0px));padding-right:calc(18px + env(safe-area-inset-right,0px));max-height:calc(100dvh - 28px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+@media(max-width:820px){
+#header{flex-wrap:wrap;row-gap:6px}
+.header-right{margin-left:auto;flex-wrap:nowrap;justify-content:flex-end}
+#home{flex-direction:column;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+#home .welcome{flex:0 0 auto;width:100%;height:auto}
+#home .play-card{height:auto;max-height:none;overflow:visible}
+.chat-card{flex:0 0 auto;width:100%;min-width:0;height:min(46dvh,430px)}
+}
+@media(max-width:480px){
+#home .play-card{grid-template-columns:1fr;gap:6px 0;padding:14px}
+#home .home-actions{grid-template-columns:1fr}
+#home label[for="map-select"],#home label[for="room-size"],#home .mode-option,#home label[for="player-name"]{grid-column:1}
+#home #map-select,#home #room-size,#home #player-name,#home .home-chat-icon{grid-column:1}
+#home label[for="map-select"]{grid-row:auto}#home #map-select{grid-row:auto}
+#home label[for="room-size"]{grid-row:auto}#home #room-size{grid-row:auto}
+#home .mode-option{grid-row:auto}#home .home-chat-icon{grid-row:auto}
+#home label[for="player-name"]{grid-row:auto}#home #player-name{grid-row:auto}
+#home button[data-dialog="appearance-dialog"]{grid-row:auto}
+#home .home-actions{grid-row:auto}
+.chat-card{height:min(52dvh,480px);padding:12px}
+.chat-input-row button{min-height:38px;padding:0 14px}
+#lobby #player-slots{grid-template-columns:repeat(3,minmax(0,1fr))}
+#appearance-dialog .outfit-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+.game-dialog{max-width:calc(100vw - 16px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+}
+/* Phone header fit (Ken 2026-11-09, preview pass 2): the map tag moved into
+   the header for the lobby is a desktop-width element; on narrow screens it
+   overlapped the icon cluster and the play card title. Drop it under 700px
+   (the map is still chosen in the card) and compact brand/icons so the
+   header stays two clean rows at most. */
+@media(max-width:700px){
+#header{gap:8px}
+#header .island-caption{display:none}
+.brand{font-size:20px}
+.brand-mark{width:34px;height:34px;font-size:29px;border-radius:12px}
+.brand small{display:none}
+.header-right{gap:6px}
+#home .section-heading h2{font-size:14px}
+}
+/* Phone header fit pass 3: keep the home offset in sync with the now
+   auto-height header on short screens (mobile landscape ~412px tall). */
+@media(max-width:820px) and (max-height:440px){#home{top:calc(60px + env(safe-area-inset-top,0px))!important}}
+@media(max-height:440px){#home{top:calc(100px + env(safe-area-inset-top,0px))!important}}
+/* Landscape lobby, soft two-card layout (Ken 2026-11-09, revised): the
+   ready card and the chat card float over the open 3D scene; the
+   selected character stands in the open area at in-game x2 scale,
+   facing the screen. No dividing stage frame. */
+@media(min-width:821px),(min-width:701px) and (max-height:440px){
+#home{flex-direction:row}
+#home .welcome{flex:0 0 min(460px,38vw)}
+#home .play-card{max-width:400px}
+.chat-card{flex:0 1 400px}
+}
+/* Phone landscape: the two cards share the width by ratio so both stay
+   readable on ~915px-wide phones; the character shows in the open
+   scene area to their right. */
+@media(min-width:701px) and (max-width:1000px) and (max-height:440px){
+#home{gap:10px}
+#home .welcome{flex:1.25 1 0}
+#home .play-card{max-width:none}
+.chat-card{flex:1 1 0}
+}
+/* Login screen, Free Fire style (Ken 2026-11-09): the 3D island and the
+   selected character stay visible behind a soft dim layer; a centred card
+   carries the logo, the character name and one big enter button. After
+   entering, the card fades away and the lobby shows as before. */
+#login-screen{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px));background:linear-gradient(180deg,#12351f26,#0d2a18a6);backdrop-filter:blur(3px);transition:opacity .35s ease}
+#login-screen.login-done{opacity:0;pointer-events:none}
+.login-card{width:min(400px,92vw);background:#fffef6f2;border:1px solid #fff;border-radius:26px;box-shadow:0 24px 60px #12351f38;padding:28px 26px 22px;text-align:center}
+.login-logo .login-mark{display:inline-grid;place-items:center;width:58px;height:58px;border-radius:18px;background:#f3836f;color:#fff;font-size:34px;box-shadow:0 8px 20px #f3836f55;margin-bottom:8px}
+.login-logo h1{margin:0;font-size:34px;letter-spacing:-1.5px;color:#274d3d}
+.login-logo h1 span{font-weight:300}
+.login-logo p{margin:2px 0 18px;font-size:10px;font-weight:800;letter-spacing:3.5px;color:#7d9b84}
+.login-label{display:block;text-align:left;font-size:12px;font-weight:800;color:#41604c;margin:0 2px 6px}
+#login-name{width:100%;box-sizing:border-box;padding:13px 15px;border:2px solid #dfe9d8;border-radius:14px;background:#f4f8ee;font-size:15px;color:#274d3d;outline:none}
+#login-name:focus{border-color:#f5b942;background:#fff}
+#login-enter{width:100%;margin-top:14px;padding:15px;border:0;border-radius:14px;background:linear-gradient(180deg,#ffc93c,#f5a623);color:#4a2f00;font-size:17px;font-weight:900;letter-spacing:1px;cursor:pointer;box-shadow:0 10px 24px #f5a6234d}
+#login-enter:active{transform:translateY(1px)}
+.login-note{margin:12px 0 0;font-size:11px;color:#8aa58f}
+@media(max-height:440px){.login-card{padding:16px 20px 12px}.login-logo .login-mark{width:42px;height:42px;font-size:24px;border-radius:13px}.login-logo h1{font-size:26px}.login-logo p{margin-bottom:10px}}
