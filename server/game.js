@@ -14,7 +14,7 @@ export function bombDamageFor(distance) {
   return Math.round(AIRDROP.damage * (1 - .6 * Math.max(0, distance) / AIRDROP.radius));
 }
 const emptyInput = () => ({ x: 0, z: 0, aim: 0, pitch: 0, fire: false, sprint: false });
-const emptyActions = () => ({ jump: false, interact: false, reload: false, swap: false, heal: false, skill: false });
+const emptyActions = () => ({ jump: false, interact: false, reload: false, swap: false, heal: false, skill: false, dash: false });
 export class Room {
   constructor(code, hostId, { random = Math.random, mode = 'party', mapId = 'candy', capacity=3, respawn=false, teamSize=0 } = {}) {
     this.teamSize=[2,3,4,5].includes(teamSize)&&mode!=='solo'?teamSize:0;
@@ -70,7 +70,7 @@ export class Room {
       if(this.teamSize){const mates=[...this.players.values()].filter(q=>q.team===p.team),index=mates.indexOf(p);const center=this.map.spawnPoints[p.team===1?0:Math.floor(this.map.spawnPoints.length/2)];let found=false;for(let n=0;n<100;n++){const angle=n*2.39996+index*1.2,r=2+index*2+n*.15;const x=center.x+Math.sin(angle)*r,z=center.z+Math.cos(angle)*r;if(Math.hypot(x,z)<this.map.radius-2&&!this.map.obstacles.some(o=>obstacleSolid(o,this.obstacles)&&obstacleContains(o,x,z,1))&&!mates.slice(0,index).some(q=>Math.hypot(q.x-x,q.z-z)<1.5)){spawn.x=x;spawn.z=z;found=true;break;}}if(!found){spawn.x=center.x;spawn.z=center.z;}}
       Object.assign(p, { x: spawn.x, y: 0, z: spawn.z, vy: 0, previousY: 0, grounded: true, aim: Math.PI, pitch: 0,
         hp: 100, alive: true, kills: 0, deaths: 0, cooldown: 0.6 + this.random(), input: emptyInput(), actions: emptyActions(), lastInput: 0, moving: false,
-        sprinting: false, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, scope: false, skill: null, effect: null, effectRemaining: 0, climb: null, concealed: false, revealedUntil: 0, lastMarkerAt: -Infinity,
+        sprinting: false, dashUntil: 0, dashReadyAt: 0, dashVx: 0, dashVz: 0, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, scope: false, skill: null, effect: null, effectRemaining: 0, climb: null, concealed: false, revealedUntil: 0, lastMarkerAt: -Infinity,
         inventory: this.map.survival ? [] : [{ id: 'water', mag: WEAPONS.water.capacity, reserve: 999 }] });
     });
     this.pickups.forEach(p => { p.active = true; p.cooldown = 0; });
@@ -126,6 +126,21 @@ export class Room {
     this.markers = [...this.markers.filter(m => m.player !== id && m.expiresAt > this.time), marker];
     this.event('marker', { player: id, text: `${p.name} đã đánh dấu một vị trí`, at: this.time });
     return marker;
+  }
+  // One-shot dash (the old hold-to-sprint button, Ken 2026-11-09): the server
+  // owns the timing — 0.35 s at dashSpeedMultiplier, then a 5 s cooldown that
+  // starts at the press. Direction is the current world-space move input
+  // (client scene.movement() already rotates the stick by camera yaw, and
+  // bots feed world vectors too); standing still dashes along the aim
+  // (sin/cos matches the atan2(dx, dz) aim convention used by bots/aimAt).
+  tryDash(p) {
+    if (!p.alive || p.climb || this.time < (p.dashReadyAt || 0) || this.time < (p.dashUntil || 0)) return false;
+    const ix = p.input?.x || 0, iz = p.input?.z || 0, len = Math.hypot(ix, iz);
+    if (len > .1) { p.dashVx = ix / len; p.dashVz = iz / len; }
+    else { p.dashVx = Math.sin(p.aim || 0); p.dashVz = Math.cos(p.aim || 0); }
+    p.dashUntil = this.time + RULES.dashDuration;
+    p.dashReadyAt = this.time + RULES.dashCooldown;
+    return true;
   }
   launchBombWave() {
     const zone = this.zone(), count = AIRDROP.minPerWave + Math.floor(this.random() * (AIRDROP.maxPerWave - AIRDROP.minPerWave + 1));
@@ -205,15 +220,21 @@ export class Room {
         const zc=this.zone(),inside=this.map.spawnPoints.filter(s=>Math.hypot(s.x-zc.x,s.z-zc.z)<zc.radius-1);
         let spawn=null;for(let n=0;n<64;n++){const a=(this.random()+n*.618034)*Math.PI*2,r=Math.sqrt(this.random())*Math.max(1,zc.radius-2),x=zc.x+Math.sin(a)*r,z=zc.z+Math.cos(a)*r;if(Math.hypot(x,z)<this.map.radius-2&&!this.map.obstacles.some(o=>obstacleContains(o,x,z,1))){spawn={x,z};break;}}
         spawn ||= inside.length?inside[Math.floor(this.random()*inside.length)]:{x:zc.x,z:zc.z};
-        Object.assign(p,{...spawn,y:0,previousY:0,vy:0,hp:100,alive:true,grounded:true,moving:false,sprinting:false,climb:null,effect:null,effectRemaining:0,concealed:false,reload:0,cooldown:1,input:emptyInput(),actions:emptyActions()});
+        Object.assign(p,{...spawn,y:0,previousY:0,vy:0,hp:100,alive:true,grounded:true,moving:false,sprinting:false,dashUntil:0,dashReadyAt:0,dashVx:0,dashVz:0,climb:null,effect:null,effectRemaining:0,concealed:false,reload:0,cooldown:1,input:emptyInput(),actions:emptyActions()});
       }
       if (!p.alive) continue;
       if (p.bot) this.botInput(p, dt);
       else if (!p.connected || this.time - p.lastInput > .5) { p.input = emptyInput(); p.actions = emptyActions(); }
       const input = p.input, actions = p.actions;
-      p.aim = input.aim; p.pitch = input.pitch || 0; p.moving = Math.hypot(input.x, input.z) > .1; p.sprinting = p.moving && input.sprint;
+      p.aim = input.aim; p.pitch = input.pitch || 0;
+      if (actions.dash) this.tryDash(p);
+      const dashing = this.time < (p.dashUntil || 0);
+      p.moving = Math.hypot(input.x, input.z) > .1 || dashing;
+      // Humans: sprinting now means "dashing" only (snapshot field name kept so
+      // scene footstep/FOV code is unchanged). Bots keep the old held sprint.
+      p.sprinting = p.bot ? (p.moving && !!input.sprint) : dashing;
       if(actions.skill)useSkill(this,p);
-      stepActor(p, { ...input, jump: actions.jump }, dt, this.map, this.obstacles);
+      stepActor(p, p.bot ? { ...input, jump: actions.jump } : dashing ? { ...input, jump: actions.jump, dashing: true, sprint: false, x: p.dashVx || 0, z: p.dashVz || 0 } : { ...input, jump: actions.jump, sprint: false }, dt, this.map, this.obstacles);
       if (Math.hypot(p.x - zone.x, p.z - zone.z) > zone.radius) this.damage(p, dt * zone.damage, null);
       if (actions.interact) interact(this, p);
       if (actions.swap && p.inventory.length > 1) { p.slot = (p.slot + 1) % p.inventory.length; p.reload = 0; }
@@ -252,8 +273,8 @@ export class Room {
   snapshot() {
     return { type: 'state', code: this.code, phase: this.phase, mode: this.mode, capacity:this.capacity, teamSize:this.teamSize, respawn:this.respawn, hostId: this.hostId, round: this.round,
       mapId: this.map.id, duration: this.duration, time: Math.round(this.time * 100) / 100, radius: this.radius(), zone: this.zone(), winner: this.winner, markers: this.markers.map(m => ({ ...m })),
-      players: [...this.players.values()].map(({ id, name, bot, team, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, deaths, respawnAt, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining, concealed, climb }) =>
-        ({ id, name, bot, team, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, deaths: deaths||0, respawnIn: alive?0:Math.max(0, Math.round(((respawnAt||0) - this.time) * 10) / 10), ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
+      players: [...this.players.values()].map(({ id, name, bot, team, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, deaths, respawnAt, ready, connected, moving, grounded, sprinting, dashUntil, dashReadyAt, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining, concealed, climb }) =>
+        ({ id, name, bot, team, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, deaths: deaths||0, respawnIn: alive?0:Math.max(0, Math.round(((respawnAt||0) - this.time) * 10) / 10), ready, connected, moving, grounded, sprinting, dashCooldownLeft: Math.max(0, Math.round(((dashReadyAt||0) - this.time) * 10) / 10), dashing: this.time < (dashUntil||0), inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
       bombs: this.bombs.map(({ id, x, z, fall, total }) => ({ id, x: +x.toFixed(2), z: +z.toFixed(2), fall: +fall.toFixed(2), total })),
       bullets: this.bullets.map(({ id, owner, weapon, x, y, z, vx, vy, vz, speed }) => ({ id, owner, weapon, x, y, z, vx, vy, vz, speed })),
       loot: this.loot.filter(l => l.active), obstacles: [...this.obstacles.values()].filter(s => s.open || s.destroyed || s.hp < s.maxHp),

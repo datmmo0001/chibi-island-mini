@@ -1,5 +1,5 @@
 export const GAME_VERSION = '0.7.2';
-export const RULES = Object.freeze({ humans: 3, bots: 5, tickRate: 30, snapshotRate: 20, duration: 180, arenaRadius: 31 * Math.sqrt(5), playerRadius: 0.65, speed: 6.4, sprintMultiplier: 1.6, gravity: 25, jumpSpeed: 11.8, interactRange: 3.4, bulletSpeed: 58, damage: 16, fireInterval: 0.33, bulletLife: 1.3, reconnectSeconds: 25, markerLife: 8, markerCooldown: 3, markerRange: 18 });
+export const RULES = Object.freeze({ humans: 3, bots: 5, tickRate: 30, snapshotRate: 20, duration: 180, arenaRadius: 31 * Math.sqrt(5), playerRadius: 0.65, speed: 6.4, sprintMultiplier: 1.6, dashDuration: 0.35, dashSpeedMultiplier: 2.2, dashCooldown: 5, gravity: 25, jumpSpeed: 11.8, interactRange: 3.4, bulletSpeed: 58, damage: 16, fireInterval: 0.33, bulletLife: 1.3, reconnectSeconds: 25, markerLife: 8, markerCooldown: 3, markerRange: 18 });
 export const WEAPONS = Object.freeze({
   water: { id: 'water', name: 'Súng nước', damage: 16, speed: 58, interval: .28, capacity: 18, reserve: 54, reload: 1.3, life: 1.3, spread: .018, pellets: 1, color: '#42eaff' },
   spray: { id: 'spray', name: 'Vòi phun liên thanh', damage: 10, speed: 54, interval: .12, capacity: 28, reserve: 84, reload: 1.65, life: 1.1, spread: .055, pellets: 1, color: '#ffe45b' },
@@ -8,9 +8,9 @@ export const WEAPONS = Object.freeze({
 });
 export const SKILLS = Object.freeze({
   dash: { name:'Lướt gió', icon:'»', duration:5, color:'#71eeff', description:'Tốc độ ×3 trong 5 giây' },
-  flight: { name:'Cánh trời', icon:'↟', duration:4, color:'#d6b1ff', description:'Bật lên cao và bay trong 4 giây' },
-  regen: { name:'Suối lành', icon:'✚', duration:4, color:'#89ffb4', description:'Hồi 16 máu mỗi giây trong 4 giây' },
-  power: { name:'Hỏa lực', icon:'×2', duration:4, color:'#ffca6f', description:'Sát thương súng ×2 trong 4 giây' },
+  flight: { name:'Cánh trời', icon:'↟', duration:5, color:'#d6b1ff', description:'Bật lên cao và bay trong 5 giây' },
+  regen: { name:'Suối lành', icon:'✚', duration:5, color:'#89ffb4', description:'Hồi 16 máu mỗi giây trong 5 giây' },
+  power: { name:'Hỏa lực', icon:'×2', duration:5, color:'#ffca6f', description:'Sát thương súng ×2 trong 5 giây' },
   rocket: { name:'Tên lửa xuyên phá', icon:'➤', duration:0, color:'#ff947b', description:'Tên lửa xuyên vật cản và người, 65 sát thương mỗi người' }
 });
 export const OUTFITS = [
@@ -234,7 +234,7 @@ export function stepActor(actor,input,dt,map,states){
   actor.y=previousY+actor.vy*dt;
   for(const o of map.obstacles)if((o.base||0)>0&&obstacleSolid(o,states)&&obstacleContains(o,actor.x,actor.z,RULES.playerRadius*.5)&&previousY+2.65<=o.base+.04&&actor.y+2.65>=o.base&&actor.vy>0){actor.y=o.base-2.65;actor.vy=0;}
   const boost=actor.effect==='dash'&&actor.effectRemaining>0?3:1;
-  moveActor(actor,input.x,input.z,dt,map,states,RULES.speed*(input.sprint?RULES.sprintMultiplier:1)*boost*(input.aiming?.65:1));
+  moveActor(actor,input.x,input.z,dt,map,states,RULES.speed*(input.dashing?RULES.dashSpeedMultiplier:input.sprint?RULES.sprintMultiplier:1)*boost*(input.aiming?.65:1));
   // Stop upward motion at the underside of a raised platform.
   for(const o of map.obstacles)if((o.base||0)>0&&obstacleSolid(o,states)&&obstacleContains(o,actor.x,actor.z,RULES.playerRadius*.5)&&previousY+2.65<=o.base+.04&&actor.y+2.65>=o.base&&actor.vy>0){actor.y=o.base-2.65;actor.vy=0;}
   let floor=0;

@@ -344,6 +344,15 @@ export class IslandScene {
     const selections=players?players.map(p=>({outfit:p.outfit,hat:p.hat,mine:p.id===selfId})):[{outfit,hat,mine:true}];
     selections.forEach((p,i)=>{const a=avatar(p.outfit,p.hat);if(players){a.position.set((i-(selections.length-1)/2)*4.5,.05,8+(p.mine?1:-.3));a.scale.setScalar(p.mine?2.25:1.95);a.rotation.y=i===0?.16:-.15;}else{a.position.set(11,.05,10);a.scale.setScalar(2.6);a.rotation.y=0;a.userData.lobbyHero=true;}this.preview.add(a);});
   }
+  setDialogStage(rect,outfitId,hat){
+    if(!rect){this.dialogStage=null;if(this.dialogHero)this.dialogHero.visible=false;return;}
+    this.dialogStage={x:rect.x,y:rect.y,width:rect.width,height:rect.height};
+    const sig=`${outfitId}/${hat}`;
+    if(!this.dialogHero||this.dialogSig!==sig){
+      if(this.dialogHero){this.scene.remove(this.dialogHero);this.dispose(this.dialogHero);}
+      this.dialogHero=avatar(outfitId,hat);this.dialogHero.position.set(20,.05,18);this.dialogHero.scale.setScalar(2.6);this.dialogHero.visible=false;this.scene.add(this.dialogHero);this.dialogSig=sig;
+    }
+  }
   resize(){this.width=innerWidth;this.height=innerHeight;this.renderer.setSize(this.width,this.height,false);}
   configure({quality='auto',sensitivity=1,invertY=false}={}){
     this.quality=quality;this.sensitivity=clamp(sensitivity,.5,2);this.invertY=invertY;
@@ -466,5 +475,25 @@ export class IslandScene {
     this.particles=this.particles.filter(p=>{p.life-=dt;p.vy-=dt*10;p.o.position.x+=p.vx*dt;p.o.position.y+=p.vy*dt;p.o.position.z+=p.vz*dt;p.o.scale.multiplyScalar(Math.exp(-dt*2));if(p.life<=0){this.scene.remove(p.o);p.o.geometry.dispose();return false;}return true;});
     this.ripples=this.ripples.filter(r=>{r.life-=dt;const k=1-Math.max(0,r.life)/.35;r.o.scale.setScalar(.3+(r.max-.3)*k);r.o.material.opacity=.85*(1-k);if(r.life<=0){this.scene.remove(r.o);r.o.geometry.dispose();r.o.material.dispose();return false;}return true;});
     this.zone.visible=playing;this.zoneWall.visible=playing;this.renderer.setViewport(0,0,this.width,this.height);this.renderer.clear();this.renderer.setViewport(0,this.height-viewportHeight,this.width,viewportHeight);if(useStage&&!playing){const hb=Math.max(1,stage.y);this.renderer.setScissorTest(true);this.renderer.setScissor(0,this.height-hb,this.width,hb);this.renderer.render(this.scene,this.camera);this.renderer.setScissorTest(false);}else this.renderer.render(this.scene,this.camera);if(useStage&&!playing){this.camera.aspect=stage.width/stage.height;this.camera.updateProjectionMatrix();this.renderer.setScissorTest(true);this.renderer.setScissor(stage.x,this.height-stage.y-stage.height,stage.width,stage.height);this.renderer.setViewport(stage.x,this.height-stage.y-stage.height,stage.width,stage.height);this.renderer.render(this.scene,this.camera);this.renderer.setScissorTest(false);}
+    if(this.dialogStage&&!playing&&this.dialogHero){
+      const s=this.dialogStage,hero=this.dialogHero;hero.visible=true;hero.rotation.y=Math.sin(t*.5)*.35;hero.position.y=.05+Math.sin(t*2)*.045;
+      hero.updateWorldMatrix(true,true);const bb=new THREE.Box3().setFromObject(hero);
+      let cx=20,cy=3.4,cz=18,hh=6.8;
+      if(isFinite(bb.min.x)&&isFinite(bb.max.x)&&(bb.max.y-bb.min.y)>.1){cx=(bb.min.x+bb.max.x)/2;cy=(bb.min.y+bb.max.y)/2;cz=(bb.min.z+bb.max.z)/2;hh=bb.max.y-bb.min.y;}
+      const aspect=s.width/Math.max(1,s.height),halfH=hh*.62,cam=this.previewCamera;
+      cam.left=-halfH*aspect;cam.right=halfH*aspect;cam.top=halfH;cam.bottom=-halfH;cam.near=.1;cam.far=400;cam.updateProjectionMatrix();
+      cam.position.set(cx,cy+hh*.1,cz+hh*1.25);cam.lookAt(cx,cy,cz);cam.updateMatrixWorld();
+      const gy=Math.max(0,this.height-s.y-s.height);
+      // Only the dialog hero belongs in the stage frame: hide the lobby
+      // preview group for this pass (its hero stands inside the same
+      // frustum) and clear inside the scissor so the main pass cannot
+      // depth-fight the hero.
+      const previewWasVisible=this.preview.visible;this.preview.visible=false;
+      this.renderer.setScissorTest(true);this.renderer.setScissor(s.x,gy,s.width,s.height);this.renderer.setViewport(s.x,gy,s.width,s.height);this.renderer.clear(true,true,true);
+      this.renderer.render(this.scene,cam);
+      this.renderer.setScissorTest(false);this.renderer.setViewport(0,0,this.width,this.height);
+      this.preview.visible=previewWasVisible;
+      hero.visible=false;
+    }
   }
 }

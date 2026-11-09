@@ -82,17 +82,17 @@ test('dash travels 3x for 5 seconds, stops at walls and does not stack with anot
   const m={...emptyMap,obstacles:[{id:'wall',x:2,z:0,hx:.1,hz:3,r:3,h:5,shape:'box'}]};p.x=0;stepActor(p,{x:1,z:0,sprint:true},.2,m);assert.ok(p.x<=1.251);
   p.skill='power';assert.equal(useSkill(room,p),false);assert.equal(p.skill,'power');updateSkill(p,5);assert.equal(p.effect,null);
 });
-test('flight lifts above roofs for four seconds then falls, cannot tunnel through tower underside',()=>{
+test('flight lifts above roofs for five seconds then falls, cannot tunnel through tower underside',()=>{
   const room=roomForForest(),p=room.players.get('me');Object.assign(p,actor(),{skill:'flight'});useSkill(room,p);
-  for(let i=0;i<120;i++){stepActor(p,{x:0,z:0},1/30,emptyMap);updateSkill(p,1/30);}assert.ok(p.y>7.9&&p.y<=8.01);assert.equal(p.effect,null);
+  for(let i=0;i<150;i++){stepActor(p,{x:0,z:0},1/30,emptyMap);updateSkill(p,1/30);}assert.ok(p.y>7.9&&p.y<=8.01);assert.equal(p.effect,null);
   for(let i=0;i<60;i++)stepActor(p,{x:0,z:0},1/30,emptyMap);assert.equal(p.y,0);
   Object.assign(p,actor(),{skill:'flight'});useSkill(room,p);const platform={...emptyMap,obstacles:[{id:'floor',x:0,z:0,hx:3,hz:3,r:4,base:6,h:6.3,shape:'box',walkable:true}]};
   for(let i=0;i<60;i++)stepActor(p,{x:0,z:0},1/30,platform);assert.ok(p.y<=3.351);
 });
-test('regeneration heals over four seconds only and 2x damage expires exactly',()=>{
-  const room=roomForForest(),p=room.players.get('me');Object.assign(p,actor(),{skill:'regen'});useSkill(room,p);updateSkill(p,1);assert.equal(p.hp,36);updateSkill(p,3.5);assert.equal(p.hp,84);updateSkill(p,2);assert.equal(p.hp,84);
+test('regeneration heals over five seconds only and 2x damage expires exactly',()=>{
+  const room=roomForForest(),p=room.players.get('me');Object.assign(p,actor(),{skill:'regen'});useSkill(room,p);updateSkill(p,1);assert.equal(p.hp,36);updateSkill(p,3.5);assert.equal(p.hp,92);updateSkill(p,.5);assert.equal(p.hp,100);updateSkill(p,2);assert.equal(p.hp,100);
   p.skill='power';useSkill(room,p);p.inventory=[{id:'water',mag:18,reserve:54}];p.slot=0;p.cooldown=0;p.reload=0;p.aim=0;
-  shoot(room,p);assert.equal(room.bullets.at(-1).damage,32);updateSkill(p,4);p.cooldown=0;shoot(room,p);assert.equal(room.bullets.at(-1).damage,16);
+  shoot(room,p);assert.equal(room.bullets.at(-1).damage,32);updateSkill(p,4);p.cooldown=0;shoot(room,p);assert.equal(room.bullets.at(-1).damage,32);updateSkill(p,1);p.cooldown=0;shoot(room,p);assert.equal(room.bullets.at(-1).damage,16);
 });
 test('rocket pierces cover and multiple players, damages each only once and crosses the island',()=>{
   const room=roomForForest(),p=room.players.get('me');room.map={...room.map,radius:196,obstacles:[{id:'wall',x:0,z:10,hx:5,hz:1,r:5,h:8,shape:'box'}]};

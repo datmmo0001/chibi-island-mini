@@ -36,9 +36,9 @@ $('map-select').onchange = selectMap; selectMap();
 if (!OUTFITS.some(o => o.id === outfit)) outfit = 'bear'; if (!HATS.includes(hat)) hat = 'ears';
 let ws, identity = null, state = null, retry = 0, retryTimer, toastTimer, pending = false, previewSignature = '', lastPhase = '', lastRound = 0, lastEvent = 0;
 let lastZoneKey = '';
-const keys = new Set(), pointer = { x: 0, y: 0, down: false, look: false }, touch = { x: 0, z: 0, fire: false, sprint: false };
+const keys = new Set(), pointer = { x: 0, y: 0, down: false, look: false }, touch = { x: 0, z: 0, fire: false };
 let gameAudio;
-const actions = { jump: false, interact: false, reload: false, swap: false, heal: false, skill: false };
+const actions = { jump: false, interact: false, reload: false, swap: false, heal: false, skill: false, dash: false };
 let mouseLock, playGuard, scoped=false;
 let audio = null, menus, soundEnabled = safeStore.get('chibi-sound', 'off') === 'on', musicEnabled = safeStore.get('chibi-music','on')==='on', latency = 0, resumed = false;
 // Third-person camera lock (Ken 2026-11-09): ON (default) keeps today's
@@ -58,7 +58,7 @@ function toast(message) { $('toast').textContent = message; $('toast').hidden = 
 function send(data) { if (ws?.readyState !== WebSocket.OPEN) { toast('Đang kết nối lại máy chủ. Chờ một chút nhé.'); return false; } ws.send(JSON.stringify(data)); return true; }
 function connection(online, text) { $('connection').classList.toggle('online', online); $('connection').lastChild.textContent = ' ' + text; }
 function setPending(value) { pending = value; $('create').disabled = value; $('solo').disabled = value; }
-function resetInput() { setScoped(false); keys.clear(); pointer.down = false; pointer.look = false; lookPointer = null; joystickPointer = null; touch.x = 0; touch.z = 0; touch.fire = false; touch.sprint = false; for (const key of Object.keys(actions)) actions[key] = false; $('touch-sprint').classList.remove('active'); $('joystick-knob').style.transform = ''; world.setLocalInput({fire:false}); flushInput(); }
+function resetInput() { setScoped(false); keys.clear(); pointer.down = false; pointer.look = false; lookPointer = null; joystickPointer = null; touch.x = 0; touch.z = 0; touch.fire = false; for (const key of Object.keys(actions)) actions[key] = false; $('touch-sprint').classList.remove('active', 'cooling'); const sprintLabel = $('touch-sprint').querySelector('small'); if (sprintLabel) sprintLabel.textContent = 'LƯỚT'; $('joystick-knob').style.transform = ''; world.setLocalInput({fire:false}); flushInput(); }
 function home() {
   mouseLock?.release();
   identity = null; state = null; sessionStore.set(null); lastPhase = ''; lastEvent = 0; lastRound = 0; pending = false;
@@ -102,15 +102,29 @@ function outfitSvg(o) {
   const ears = o.id === 'bunny' ? '<ellipse cx="24" cy="13" rx="5" ry="12"/><ellipse cx="45" cy="13" rx="5" ry="12"/>' : '<circle cx="17" cy="21" r="8"/><circle cx="52" cy="21" r="8"/>';
   return `<svg viewBox="0 0 70 78" aria-hidden="true"><ellipse cx="35" cy="73" rx="23" ry="3" fill="#75876a" opacity=".12"/><g fill="${o.color}">${ears}<ellipse cx="35" cy="54" rx="17" ry="19"/><ellipse cx="35" cy="32" rx="24" ry="22"/></g><ellipse cx="35" cy="35" rx="19" ry="15" fill="#ffdfbd"/><circle cx="28" cy="34" r="2" fill="#3d4740"/><circle cx="43" cy="34" r="2" fill="#3d4740"/><path d="M32 41q3 3 6 0" fill="none" stroke="#9d6b54" stroke-width="1.3"/><ellipse cx="35" cy="59" rx="10" ry="11" fill="${o.light}"/><ellipse cx="25" cy="72" rx="8" ry="4" fill="${o.accent}"/><ellipse cx="45" cy="72" rx="8" ry="4" fill="${o.accent}"/>${o.id === 'duck' ? '<ellipse cx="35" cy="19" rx="22" ry="5" fill="#edb845"/>' : ''}</svg>`;
 }
+let previewOutfit = outfit;
 function renderOutfits() {
   $('outfits').replaceChildren(...OUTFITS.map(o => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'outfit' + (o.id === outfit ? ' selected' : ''); b.setAttribute('aria-pressed', String(o.id === outfit)); b.setAttribute('aria-label', o.name);
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'outfit' + (o.id === outfit ? ' selected' : '') + (o.id === previewOutfit ? ' previewing' : ''); b.setAttribute('aria-pressed', String(o.id === outfit)); b.setAttribute('aria-label', o.name);
     b.innerHTML = outfitSvg(o); const name = document.createElement('span'); name.textContent = o.name; b.append(name);
-    b.onclick = () => { outfit = o.id; safeStore.set('chibi-outfit', outfit); renderOutfits(); world.updatePreview(outfit, hat); }; return b;
+    b.onclick = () => { previewOutfit = o.id; renderOutfits(); syncOutfitStage(); }; return b;
   }));
   const labels = { ears: 'Tai thú', cap: 'Mũ lưỡi trai', leaf: 'Lá non' };
-  $('hats').replaceChildren(...HATS.map(h => { const b = document.createElement('button'); b.type = 'button'; b.className = 'hat' + (h === hat ? ' selected' : ''); b.textContent = labels[h]; b.setAttribute('aria-pressed', String(h === hat)); b.onclick = () => { hat = h; safeStore.set('chibi-hat', hat); renderOutfits(); world.updatePreview(outfit, hat); }; return b; }));
+  $('hats').replaceChildren(...HATS.map(h => { const b = document.createElement('button'); b.type = 'button'; b.className = 'hat' + (h === hat ? ' selected' : ''); b.textContent = labels[h]; b.setAttribute('aria-pressed', String(h === hat)); b.onclick = () => { hat = h; safeStore.set('chibi-hat', hat); renderOutfits(); world.updatePreview(outfit, hat); syncOutfitStage(); }; return b; }));
+  const previewing = OUTFITS.find(o => o.id === previewOutfit) || OUTFITS[0];
+  $('outfit-preview-name').textContent = previewing.name;
+  $('outfit-confirm').textContent = `Chọn ${previewing.name}`;
 }
+function syncOutfitStage() {
+  const dialog = $('appearance-dialog'); if (!dialog.open) { world.setDialogStage(null); return; }
+  const rect = $('outfit-stage').getBoundingClientRect();
+  if (rect.width < 8 || rect.height < 8) { world.setDialogStage(null); return; }
+  world.setDialogStage({ x: rect.x, y: rect.y, width: rect.width, height: rect.height }, previewOutfit, hat);
+}
+$('outfit-confirm').onclick = () => { outfit = previewOutfit; safeStore.set('chibi-outfit', outfit); renderOutfits(); world.updatePreview(outfit, hat); $('appearance-dialog').close(); };
+new MutationObserver(() => { const dialog = $('appearance-dialog'); document.body.classList.toggle('appearance-open', dialog.open); if (dialog.open) { previewOutfit = outfit; renderOutfits(); requestAnimationFrame(syncOutfitStage); } else world.setDialogStage(null); }).observe($('appearance-dialog'), { attributes: true, attributeFilter: ['open'] });
+$('appearance-dialog').addEventListener('close', () => world.setDialogStage(null));
+addEventListener('resize', () => { if ($('appearance-dialog').open) syncOutfitStage(); });
 function enter(type) {
   if (pending) return;
   const name = $('player-name').value.trim(); if (!name) { toast('Đặt tên trước khi lên đảo nhé.'); $('player-name').focus(); return; }
@@ -277,6 +291,13 @@ function renderAbilities(me){
   button.setAttribute('aria-label',skill?`${active?'Đang dùng':'Dùng kỹ năng'} ${skill.name}`:'Kỹ năng · Mở hòm để nhặt');button.title=skill?.description||'Mở hòm để nhặt kỹ năng';
   $('touch-scope').disabled=!me.alive||!me.scope||!me.inventory?.length;$('scope-label').textContent=me.scope?'NGẮM 3×':'TÌM KÍNH';
   if($('touch-scope').disabled)setScoped(false);
+  // Dash button (ex-sprint): server decides timing; here we only mirror it —
+  // highlighted while dashing, dimmed with a seconds countdown while cooling
+  // (never disabled, so a press during cooldown is simply ignored server-side).
+  const sprintButton=$('touch-sprint'),dashLeft=me.dashCooldownLeft||0,dashing=!!me.dashing;
+  sprintButton.classList.toggle('active',dashing);sprintButton.classList.toggle('cooling',!dashing&&dashLeft>0);
+  const sprintLabel=sprintButton.querySelector('small');if(sprintLabel)sprintLabel.textContent=dashing?'LƯỚT':dashLeft>0?`${dashLeft.toFixed(1)}s`:'LƯỚT';
+  sprintButton.setAttribute('aria-label',dashing?'Đang lướt nhanh':dashLeft>0?`Lướt nhanh · Sẵn sàng sau ${dashLeft.toFixed(1)} giây`:'Lướt nhanh');
   document.querySelector('.health-symbol').textContent=me.concealed?'♣':'♥';document.querySelector('[data-hud=health]').title=me.concealed?'Đang ẩn trong lùm cây':'';
 }
 function initAudio() { gameAudio?.unlock();if (!soundEnabled) return; try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume().catch(() => {}); } catch {} }
@@ -299,6 +320,8 @@ addEventListener('keydown', event => {
   if (event.code === 'KeyT' && !event.repeat) { event.preventDefault(); markPosition(); return; }
   const actionKeys = { Space: 'jump', KeyE: 'interact', KeyR: 'reload', KeyQ: 'swap', KeyH: 'heal', KeyC: 'skill' };
   if (actionKeys[event.code]) { event.preventDefault(); if (!event.repeat) actions[actionKeys[event.code]] = true; }
+  // Shift is no longer hold-to-sprint: one press = one server-timed dash.
+  if ((event.code === 'ShiftLeft' || event.code === 'ShiftRight') && !event.repeat) actions.dash = true;
   if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight','KeyF'].includes(event.code)) { event.preventDefault(); keys.add(event.code); }
   if (event.code === 'Digit1' && state.players.find(p=>p.id===identity)?.slot===1) actions.swap=true;
   if (event.code === 'Digit2' && state.players.find(p=>p.id===identity)?.slot===0) actions.swap=true;
@@ -336,9 +359,8 @@ function releaseJoystick(event){if(event.pointerId!==joystickPointer)return;joys
 for(const type of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(type,releaseJoystick);
 $('touch-fire').addEventListener('pointerdown',event=>{event.preventDefault();$('touch-fire').setPointerCapture(event.pointerId);touch.fire=true;initAudio();flushInput();});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('touch-fire').addEventListener(type,()=>{touch.fire=false;flushInput();});
-for(const [id,key]of [['touch-jump','jump'],['touch-interact','interact'],['touch-reload','reload'],['touch-swap','swap'],['touch-heal','heal'],['touch-skill','skill']])$(id).addEventListener('pointerdown',event=>{event.preventDefault();actions[key]=true;initAudio();flushInput();});
+for(const [id,key]of [['touch-jump','jump'],['touch-interact','interact'],['touch-reload','reload'],['touch-swap','swap'],['touch-heal','heal'],['touch-skill','skill'],['touch-sprint','dash']])$(id).addEventListener('pointerdown',event=>{event.preventDefault();actions[key]=true;initAudio();flushInput();});
 $('touch-scope').onclick=toggleScope;
-$('touch-sprint').onclick=()=>{touch.sprint=!touch.sprint;$('touch-sprint').classList.toggle('active',touch.sprint);flushInput();};
 for(let i=0;i<2;i++)$(`weapon-slot-${i}`).onclick=()=>{const me=state?.players.find(p=>p.id===identity);if(me&&me.inventory?.[i]&&me.slot!==i){actions.swap=true;flushInput();}};
 function markPosition(){const me=state?.players.find(p=>p.id===identity);if(state?.phase==='playing'&&me?.alive&&!menus?.isOpen()&&!playGuard?.isBlocked())send({type:'marker',aim:world.cameraYaw});}
 $('mark-position').onclick=markPosition;
@@ -358,7 +380,7 @@ function flushInput(){
     if(target){const dx=target.x-me.x,dz=target.z-me.z;aim={aim:Math.atan2(dx,dz),pitch:Math.atan2(target.y-me.y,Math.hypot(dx,dz))};}
   }
   world.setLocalInput({...aim,fire});
-  if(send({type:'input',...movement,...aim,fire,aiming:scoped,sprint:touch.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight'),...actions}))for(const key of Object.keys(actions))actions[key]=false;
+  if(send({type:'input',...movement,...aim,fire,aiming:scoped,sprint:false,...actions}))for(const key of Object.keys(actions))actions[key]=false;
 }
 setInterval(flushInput,50);
 setInterval(()=>{if(ws?.readyState===WebSocket.OPEN)send({type:'ping',at:performance.now()});},2000);

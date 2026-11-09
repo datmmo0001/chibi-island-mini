@@ -48,7 +48,7 @@
     <footer class="home-footer"><span>Made for little adventures.</span><span><kbd>WASD</kbd> DI CHUYỂN <span class="footer-dot">·</span> BẤM VÀO CẢNH ĐỂ KHÓA CHUỘT</span></footer>
   </main>
 
-<dialog id="appearance-dialog" class="game-dialog"><button data-close-dialog class="dialog-close" aria-label="Đóng trang phục">×</button><h2>Trang phục của bạn</h2><a href="/characters.html" target="_blank" rel="noopener">Xem bộ sưu tập 3D ↗</a>        <div class="outfit-list" id="outfits" role="group" aria-label="Chọn trang phục"></div>
+<dialog id="appearance-dialog" class="game-dialog"><button data-close-dialog class="dialog-close" aria-label="Đóng trang phục">×</button><h2>Trang phục của bạn</h2><div class="appearance-body"><div class="appearance-left"><div class="outfit-list" id="outfits" role="group" aria-label="Chọn trang phục"></div></div><div class="appearance-right"><div id="outfit-stage" aria-hidden="true"></div><div class="outfit-preview-name" id="outfit-preview-name"></div><button type="button" class="primary" id="outfit-confirm">Chọn trang phục</button></div></div>
         <div class="hat-row"><span>Phụ kiện</span><div id="hats" role="group" aria-label="Chọn phụ kiện"></div></div>
 <button class="secondary" data-close-dialog>Xong</button></dialog>
 
@@ -76,7 +76,7 @@
     <div id="spectating" hidden>Bạn đã hóa bóng bay 🎈<br><small>Đang theo dõi những người còn lại</small></div>
     <div class="weapon-card hud-widget" data-hud="weapon"><div class="weapon-visual"><svg id="weapon-icon" viewBox="0 0 112 44" aria-hidden="true"><use id="weapon-icon-use" href="/weapon-icons.svg#none"/></svg><b id="weapon-name" class="sr-only">Chưa có súng</b></div><div class="ammo"><strong id="ammo-mag">—</strong><span id="ammo-reserve">Tìm vật phẩm phát sáng</span></div><div id="weapon-slots"><button id="weapon-slot-0" aria-label="Chọn súng thứ nhất">1 · Trống</button><button id="weapon-slot-1" aria-label="Chọn súng thứ hai">2 · Trống</button></div><small id="reload-status"></small><div id="reload-progress" role="progressbar" aria-label="Tiến độ nạp đạn" aria-valuemin="0" aria-valuemax="100" hidden><i></i></div><span id="medkit-count">Bình hồi phục: 0</span></div>
     <div id="interact-prompt" class="hud-widget" data-hud="interaction" hidden><kbd>E</kbd><span id="interact-text">Nhặt vật phẩm</span></div>
-    <div class="desktop-tip"><kbd>WASD</kbd> đi <kbd>Shift</kbd> chạy <kbd>Space</kbd> nhảy <kbd>E</kbd> nhặt/mở <kbd>R</kbd> nạp <kbd>Q</kbd> đổi súng <kbd>H</kbd> hồi phục · C kỹ năng · V ngắm · Esc mở chuột</div>
+    <div class="desktop-tip"><kbd>WASD</kbd> đi <kbd>Shift</kbd> lướt <kbd>Space</kbd> nhảy <kbd>E</kbd> nhặt/mở <kbd>R</kbd> nạp <kbd>Q</kbd> đổi súng <kbd>H</kbd> hồi phục · C kỹ năng · V ngắm · Esc mở chuột</div>
     <canvas id="minimap" class="hud-widget" data-hud="minimap" width="170" height="170" aria-label="Bản đồ nhỏ"></canvas>
     <div id="net-stats" role="status" aria-label="Ping và FPS" hidden>Ping: – ms · FPS: –</div>
     <div id="scope-overlay" aria-hidden="true" hidden><i></i><b>3×</b></div>
@@ -88,7 +88,7 @@
       <div id="joystick" class="hud-widget" data-hud="joystick" aria-label="Cần di chuyển"><div id="joystick-knob"></div></div>
       <button id="touch-fire" class="hud-widget" data-hud="fire" aria-label="Giữ để tự ngắm và bắn">◎<small>BẮN</small></button>
       <button id="touch-jump" class="round-action hud-widget" data-hud="jump" aria-label="Nhảy">↑<small>NHẢY</small></button>
-      <button id="touch-sprint" class="round-action hud-widget" data-hud="sprint" aria-label="Bật tắt chạy nhanh">»<small>CHẠY</small></button>
+      <button id="touch-sprint" class="round-action hud-widget" data-hud="sprint" aria-label="Lướt nhanh">»<small>LƯỚT</small></button>
       <button id="touch-interact" class="round-action hud-widget" data-hud="pickup" aria-label="Nhặt đồ hoặc mở vật cản">⇩<small>NHẶT</small></button>
       <button id="touch-swap" class="round-action compact-action hud-widget" data-hud="swap" aria-label="Đổi súng">⇄<small>ĐỔI</small></button>
       <button id="touch-heal" class="round-action compact-action hud-widget" data-hud="heal" aria-label="Dùng bình hồi phục">✚<small>0</small></button>
@@ -101,10 +101,10 @@
   <div id="damage-vignette" aria-hidden="true"></div>
   <dialog id="guide-dialog" class="game-dialog" aria-labelledby="guide-title">
     <button class="dialog-close" data-close-dialog aria-label="Đóng cách chơi">×</button><div class="eyebrow">✦ HÀNH TRANG LÊN ĐẢO</div><h2 id="guide-title">Ba bước để giữ đảo.</h2>
-    <div class="guide-steps"><article><b>01 · NHẶT ĐỒ</b><p>Trên Đảo Cỏ Xanh, đến gần súng phát sáng và bấm <kbd>E</kbd> hoặc nút <strong>NHẶT / MỞ</strong>. Hòm tiếp tế có thêm đồ, thùng gỗ có thể bắn vỡ.</p></article><article><b>02 · DI CHUYỂN & BẮN</b><p><kbd>WASD</kbd> đi · <kbd>Shift</kbd> chạy · <kbd>Space</kbd> nhảy. Bấm vào cảnh để khóa chuột vào tâm ngắm; rê chuột để nhìn, chuột trái bắn. <kbd>Esc</kbd> mở chuột, <kbd>Tab</kbd> cài đặt. Điện thoại: cần trái để đi, vuốt phải để nhìn, giữ <strong>BẮN</strong> để hỗ trợ ngắm.</p></article><article><b>03 · THEO VÒNG BO</b><p>Ở trong vòng xanh trên bản đồ nhỏ. Vòng nét đứt là vùng tiếp theo. Người cuối cùng còn sống thắng.</p></article></div>
+    <div class="guide-steps"><article><b>01 · NHẶT ĐỒ</b><p>Trên Đảo Cỏ Xanh, đến gần súng phát sáng và bấm <kbd>E</kbd> hoặc nút <strong>NHẶT / MỞ</strong>. Hòm tiếp tế có thêm đồ, thùng gỗ có thể bắn vỡ.</p></article><article><b>02 · DI CHUYỂN & BẮN</b><p><kbd>WASD</kbd> đi · <kbd>Shift</kbd> lướt nhanh (hồi 5 giây) · <kbd>Space</kbd> nhảy. Bấm vào cảnh để khóa chuột vào tâm ngắm; rê chuột để nhìn, chuột trái bắn. <kbd>Esc</kbd> mở chuột, <kbd>Tab</kbd> cài đặt. Điện thoại: cần trái để đi, vuốt phải để nhìn, giữ <strong>BẮN</strong> để hỗ trợ ngắm.</p></article><article><b>03 · THEO VÒNG BO</b><p>Ở trong vòng xanh trên bản đồ nhỏ. Vòng nét đứt là vùng tiếp theo. Người cuối cùng còn sống thắng.</p></article></div>
     <div class="guide-shortcuts"><span><kbd>R</kbd> Nạp nước</span><span><kbd>Q</kbd> Đổi súng</span><span><kbd>H</kbd> Hồi phục</span><span><kbd>T</kbd> Đánh dấu phía trước</span><span><kbd>F</kbd> Bắn có hỗ trợ ngắm</span><span><kbd>C</kbd> Kỹ năng</span><span><kbd>V</kbd> / chuột phải: Ống ngắm</span></div>
     <p class="dialog-note">Đảo Rừng Gió rộng 40 lần diện tích Đảo Kẹo. Đi thẳng lên cầu thang để lên mái nhà; bấm E / NHẶT cạnh thang chòi để leo lên hoặc xuống. Núp giữa lùm cây để ẩn; bắn hoặc dùng kỹ năng sẽ lộ vị trí.</p>
-    <p class="dialog-note">Mở hòm để nhặt ống ngắm 3× và một kỹ năng dùng một lần: lướt ×3 trong 5s; bật cao và bay 4s; hồi 16 máu/s trong 4s; sát thương ×2 trong 4s; hoặc tên lửa xuyên vật cản và người, 65 sát thương. Mỗi lần giữ một kỹ năng, dùng xong nhặt tiếp. Ngắm từ xa tắt hỗ trợ tự ngắm để bắn đúng tâm.</p>
+    <p class="dialog-note">Mở hòm để nhặt ống ngắm 3× và một kỹ năng dùng một lần: lướt ×3 trong 5s; bật cao và bay 5s; hồi 16 máu/s trong 5s; sát thương ×2 trong 5s; hoặc tên lửa xuyên vật cản và người, 65 sát thương. Mỗi lần giữ một kỹ năng, dùng xong nhặt tiếp. Ngắm từ xa tắt hỗ trợ tự ngắm để bắn đúng tâm.</p>
     <p class="dialog-note">Rủ bạn: tạo phòng, gửi lời mời, tất cả sẵn sàng rồi chủ phòng bắt đầu. Đảo Kẹo có sẵn súng khi vào trận.</p><p class="live-match-note" hidden>Trận vẫn tiếp diễn khi mở hướng dẫn hoặc cài đặt.</p><button class="primary" data-close-dialog>Đã hiểu · Quay lại game</button>
   </dialog>
   <dialog id="settings-dialog" class="game-dialog" aria-labelledby="settings-title">

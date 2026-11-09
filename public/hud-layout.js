@@ -1,7 +1,7 @@
 import { USER_LANDSCAPE_HUD } from './hud-preset.js';
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 const finite = (n, fallback) => typeof n === 'number' && Number.isFinite(n) ? n : fallback;
-export const HUD_LABELS = Object.freeze({ timer:'Thời gian', alive:'Số người còn lại', tools:'Nút tiện ích', compass:'La bàn', health:'Vòng máu', weapon:'Súng và đạn', minimap:'Bản đồ nhỏ', fullscreen:'Toàn màn hình', joystick:'Cần di chuyển', fire:'Nút bắn', jump:'Nút nhảy', sprint:'Nút chạy', pickup:'Nút nhặt / mở', reload:'Nút nạp đạn', swap:'Nút đổi súng', heal:'Nút hồi máu', skill:'Nút kỹ năng', scope:'Nút ống ngắm',camera:'Nút khóa camera', interaction:'Gợi ý nhặt đồ', warning:'Cảnh báo vòng bo', feed:'Thông báo trận' });
+export const HUD_LABELS = Object.freeze({ timer:'Thời gian', alive:'Số người còn lại', tools:'Nút tiện ích', compass:'La bàn', health:'Vòng máu', weapon:'Súng và đạn', minimap:'Bản đồ nhỏ', fullscreen:'Toàn màn hình', joystick:'Cần di chuyển', fire:'Nút bắn', jump:'Nút nhảy', sprint:'Nút lướt', pickup:'Nút nhặt / mở', reload:'Nút nạp đạn', swap:'Nút đổi súng', heal:'Nút hồi máu', skill:'Nút kỹ năng', scope:'Nút ống ngắm',camera:'Nút khóa camera', interaction:'Gợi ý nhặt đồ', warning:'Cảnh báo vòng bo', feed:'Thông báo trận' });
 // The old grouped action row must not override the new independent arc buttons.
 // Keep the old key intact as a rollback; save this revision independently.
 export const HUD_STORAGE = 'chibi-hud-photo-v7';
