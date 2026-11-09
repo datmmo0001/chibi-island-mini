@@ -24,7 +24,7 @@ $('map-select').value = selectedMap;
 function selectMap() {
   selectedMap = getMap($('map-select').value).id; activeMap = getMap(selectedMap); safeStore.set('chibi-map', selectedMap); world.changeMap(selectedMap);
   $('match-duration-tag').innerHTML = activeMap.survival ? '<b>10′</b> sinh tồn' : '<b>3′</b> đấu trường';
-  $('room-size').querySelector('[value="20"]').disabled=selectedMap!=='frontier';if(selectedMap!=='frontier'&&$('room-size').value==='20')$('room-size').value='3';$('respawn-mode').disabled=selectedMap!=='candy';
+  $('room-size').querySelector('[value="20"]').disabled=selectedMap!=='frontier';if(selectedMap!=='frontier'&&$('room-size').value==='20')$('room-size').value='3';
   $('solo').firstChild.textContent=$('room-size').value.startsWith('team')?'Vào tổ đội ':'Chơi ngay ';
   $('hero-map-name').textContent = activeMap.name.toLocaleUpperCase('vi');
   $('hero-map-heading').innerHTML = activeMap.survival ? 'Đảo rộng hơn.<br>Phiêu lưu xa hơn.' : 'Đảo nhỏ.<br>Niềm vui lớn.';
@@ -41,7 +41,16 @@ let gameAudio;
 const actions = { jump: false, interact: false, reload: false, swap: false, heal: false, skill: false };
 let mouseLock, playGuard, scoped=false;
 let audio = null, menus, soundEnabled = safeStore.get('chibi-sound', 'off') === 'on', musicEnabled = safeStore.get('chibi-music','on')==='on', latency = 0, resumed = false;
-let lastHealth = null, damageTimer, firingTimer, feedSignature = '', compassAt = 0;
+// Third-person camera lock (Ken 2026-11-09): ON (default) keeps today's
+// behaviour — dragging the view turns the character's aim with it. OFF frees
+// the camera: it stays behind the character (re-centred smoothly whenever
+// the aim swings past it) while mouse/touch drags orbit it without moving
+// the character's aim. Persisted across sessions.
+let cameraLock = safeStore.get('chibi-camera-lock', 'on') !== 'off';
+function applyCameraLock() { world.cameraLock = cameraLock; const b = $('camera-lock'); b.setAttribute('aria-pressed', String(cameraLock)); $('camera-lock-icon').textContent = cameraLock ? '🔒' : '🔓'; $('camera-lock-label').textContent = cameraLock ? 'CAM KHÓA' : 'CAM TỰ DO'; }
+applyCameraLock();
+$('camera-lock').onclick = () => { cameraLock = !cameraLock; safeStore.set('chibi-camera-lock', cameraLock ? 'on' : 'off'); applyCameraLock(); toast(cameraLock ? 'Đã khóa camera sau lưng nhân vật.' : 'Camera tự do: rê để xoay quanh nhân vật.'); };
+let lastHealth = null, damageTimer, firingTimer, feedSignature = '', compassAt = 0, wasMeAlive = null;
 $('player-name').value = safeStore.get('chibi-name');
   $('login-name').value = safeStore.get('chibi-name');
 const invitedRoom = new URL(location.href).searchParams.get('room'); if (invitedRoom) $('room-code').value = invitedRoom.toUpperCase().slice(0, 6);
@@ -150,7 +159,7 @@ function renderState(data) {
   activeMap = getMap(data.mapId);
   state = data; const phaseChanged = data.phase !== lastPhase || data.round !== lastRound;
   gameAudio?.sync();
-  if (data.round !== lastRound) { lastEvent = 0; lastZoneKey = ''; feedSignature = ''; }
+  if (data.round !== lastRound) { lastEvent = 0; lastZoneKey = ''; feedSignature = ''; gameAudio?.resetStreak(); wasMeAlive = null; }
   if (phaseChanged) { lastHealth = null; $('damage-vignette').classList.remove('visible'); }
   $('home').hidden = true; $('lobby').hidden = data.phase !== 'lobby'; $('hud').hidden = data.phase !== 'playing'; $('results').hidden = data.phase !== 'finished';
   document.body.classList.toggle('playing', data.phase !== 'lobby');document.body.classList.toggle('lobby-mode',data.phase==='lobby');
@@ -167,12 +176,15 @@ function renderState(data) {
     $('match-clock').textContent = timeText(seconds); $('map-name').textContent = activeMap.name;
     if (me) {
       if(!me.alive){mouseLock?.release();setScoped(false);}
+      if(me.alive&&wasMeAlive===false&&data.phase==='playing')gameAudio?.resetStreak();
+      wasMeAlive=me.alive;
       if (lastHealth !== null && me.hp < lastHealth && data.phase === 'playing') { $('damage-vignette').classList.add('visible'); clearTimeout(damageTimer); damageTimer = setTimeout(() => $('damage-vignette').classList.remove('visible'), 350); }
       lastHealth = me.hp;
       $('my-name').textContent = me.name; $('kills').textContent = `${me.kills} lần loại`; $('health-number').textContent = `${Math.ceil(me.hp)}%`;
       document.querySelector('[data-hud=health]').setAttribute('aria-label', `Sức khỏe ${Math.ceil(me.hp)}%`);
       $('health-fill').style.strokeDashoffset = String(100 - me.hp); $('health-fill').style.stroke = me.hp < 30 ? '#ff9b87' : '#aaffc1';
       $('spectating').hidden = me.alive || data.phase === 'finished';
+      if(!me.alive&&data.phase==='playing')$('spectating').querySelector('small').textContent=data.respawn?`Hồi sinh sau ${Math.max(1,Math.ceil(me.respawnIn||0))} giây · Chuỗi hạ gục đếm lại từ đầu`:'Đang theo dõi những người còn lại';
       const outside = Math.max(0, Math.hypot(me.x - zone.x, me.z - zone.z) - zone.radius);
       $('zone-warning').hidden = !me.alive || outside <= 0 || data.phase !== 'playing';
       $('zone-distance').textContent = outside > 0 ? `Vào bo: ${Math.ceil(outside)} m` : 'Trong vùng an toàn';
@@ -185,7 +197,9 @@ function renderState(data) {
     const recent = data.events.filter(e => e.type === 'out' || (e.type === 'marker' && data.time - e.at < RULES.markerLife)).slice(-4), signature = recent.map(e => e.id).join('/');
     if (signature !== feedSignature) { feedSignature = signature; $('feed').replaceChildren(...recent.map(e => { const line = document.createElement('div'); line.className = 'feed-line' + (e.type === 'marker' ? ' marker-line' : ''); line.textContent = (e.type === 'marker' ? '⌖ ' : '') + e.text; return line; })); }
     for (const e of data.events) if (e.id > lastEvent) {
-      if(data.time-(e.at||0)<2)gameAudio.event(e,identity);
+      if(data.time-(e.at||0)<2){if(e.type==='out')gameAudio.streakEvent(e,identity);else gameAudio.event(e,identity);}
+      if(e.type==='bombwave'&&data.time-(e.at||0)<2)gameAudio.bombWhistle();
+      if(e.type==='explosion'){const d=me?Math.hypot(me.x-e.x,me.z-e.z):99,level=Math.max(.12,1-d/28);world.explode?.(e.x,e.z,level);if(data.time-(e.at||0)<2)gameAudio.boom(level);}
       if(e.type==='out'){const killer=data.players.find(p=>p.id===e.attacker),victim=data.players.find(p=>p.id===e.player);$('kill-notice').textContent=killer?`${killer.name} ▸ ${victim?.name||''}`:`${victim?.name||''} bị loại`; }
       if (e.type === 'out') tone(380, .12, .025);
       if (e.type === 'pickup' && e.player === identity) toast(e.text);
@@ -347,9 +361,10 @@ function flushInput(){
   if(send({type:'input',...movement,...aim,fire,aiming:scoped,sprint:touch.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight'),...actions}))for(const key of Object.keys(actions))actions[key]=false;
 }
 setInterval(flushInput,50);
-setInterval(()=>{if(ws?.readyState===WebSocket.OPEN)send({type:'ping',at:performance.now()});},2500);
-let previous = performance.now();
-function frame(now) { gameAudio?.sync();playGuard?.refresh();const dt = Math.min((now - previous) / 1000, .05); previous = now; world.frame(dt); if(state?.phase==='playing'&&now-compassAt>100){compassAt=now;const degrees=((Math.PI-world.cameraYaw)*180/Math.PI%360+360)%360;const names=['BẮC','ĐÔNG BẮC','ĐÔNG','ĐÔNG NAM','NAM','TÂY NAM','TÂY','TÂY BẮC'];$('compass-name').textContent=names[Math.round(degrees/45)%8];$('compass-degrees').textContent=`${String(Math.round(degrees)%360).padStart(3,'0')}°`;} requestAnimationFrame(frame); }
+setInterval(()=>{if(ws?.readyState===WebSocket.OPEN)send({type:'ping',at:performance.now()});},2000);
+let previous = performance.now(), fpsFrames = 0, fpsAt = performance.now();
+function updateNetStats(fps) { const el = $('net-stats'); if (!el) return; if (state?.phase !== 'playing') { el.hidden = true; return; } const r = $('minimap').getBoundingClientRect(); el.textContent = `Ping: ${latency} ms · FPS: ${fps}`; el.style.left = `${r.left + r.width / 2}px`; el.style.top = `${r.bottom + 5}px`; el.hidden = false; }
+function frame(now) { gameAudio?.sync();playGuard?.refresh();const dt = Math.min((now - previous) / 1000, .05); previous = now; world.frame(dt); fpsFrames++; if (now - fpsAt >= 500) { const fps = Math.round(fpsFrames * 1000 / (now - fpsAt)); fpsFrames = 0; fpsAt = now; updateNetStats(fps); } if(state?.phase==='playing'&&now-compassAt>100){compassAt=now;const degrees=((Math.PI-world.cameraYaw)*180/Math.PI%360+360)%360;const names=['BẮC','ĐÔNG BẮC','ĐÔNG','ĐÔNG NAM','NAM','TÂY NAM','TÂY','TÂY BẮC'];$('compass-name').textContent=names[Math.round(degrees/45)%8];$('compass-degrees').textContent=`${String(Math.round(degrees)%360).padStart(3,'0')}°`;} requestAnimationFrame(frame); }
 mouseLock=createMouseLock({canvas:$('world'),isPlayable:()=>state?.phase==='playing'&&state.players.find(p=>p.id===identity)?.alive&&!menus?.isOpen()&&!playGuard?.isPortrait(),rotate:(dx,dy)=>world.rotateCamera(dx,dy),resetInput,notify:()=>{$('mouse-lock-status').textContent='Trình duyệt này chưa cho khóa chuột. Hãy mở game trực tiếp trong Chrome hoặc Edge, rồi bấm lại để vào trận.';}});
 gameAudio=createGameAudio({enabled:()=>soundEnabled,musicEnabled:()=>musicEnabled,phase:()=>state?.phase,volume:()=>menus?.volume()??.7});
 $('team-select').onchange=()=>send({type:'configure',team:Number($('team-select').value)});
@@ -359,6 +374,7 @@ playGuard=createPlayGuard({mouseLock,resetInput,getPhase:()=>state?.phase,isAliv
 createFullscreen({button:$('fullscreen-toggle'),buttons:[$('home-fullscreen'),$('lobby-fullscreen'),$('rotate-fullscreen')],notify:toast,resetInput});
 world.onLocalShot=()=>{clearTimeout(firingTimer);$('crosshair').classList.add('firing');firingTimer=setTimeout(()=>$('crosshair').classList.remove('firing'),90);tone(740+Math.random()*80,.07,.025);};
 world.onLocalSplashHit=()=>gameAudio?.splash();
+world.onFootstep=run=>gameAudio?.footstep(run);
 // Login gate (Free Fire style): name + one enter button, then the lobby.
 function enterIsland(){const n=$('login-name').value.trim();if(!n){toast('Đặt tên trước khi lên đảo nhé.');$('login-name').focus();return;}$('player-name').value=n;safeStore.set('chibi-name',n);initAudio();const s=$('login-screen');s.classList.add('login-done');setTimeout(()=>{s.hidden=true;},380);}
 $('login-enter').onclick=enterIsland;

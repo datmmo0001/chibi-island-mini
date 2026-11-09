@@ -34,7 +34,7 @@
         <div class="section-heading"><h2>Sẵn sàng lên đảo?</h2><small id="match-duration-tag"></small><span>01 / CHỌN NHÂN VẬT</span></div>
         <label class="field-label" for="map-select">Bản đồ & chế độ</label>
         <select id="map-select"><option value="frontier">MỚI · Đảo Rừng Gió · Sinh tồn · Diện tích 40×</option><option value="beach">MỚI · Đảo Bãi Cát · Sinh tồn · Diện tích 20×</option><option value="meadow">Đảo Cỏ Xanh · Sinh tồn · Diện tích 20×</option><option value="candy">Đảo Kẹo · Đấu trường nhanh</option></select>
-        <label class="field-label" for="room-size">Số người chơi</label><select id="room-size"><option value="3">Phòng tối đa 3 người</option><option value="5">Phòng tối đa 5 người</option><option value="team2">Tổ đội 2 vs 2</option><option value="team3">Tổ đội 3 vs 3</option><option value="team4">Tổ đội 4 vs 4</option><option value="team5">Tổ đội 5 vs 5</option><option value="20">Phòng tối đa 20 người · Rừng Gió</option></select><label class="mode-option"><input type="checkbox" id="respawn-mode"> Đảo Kẹo: hồi sinh 3s · tính kill</label><button class="secondary home-chat-icon" id="chat-focus" aria-label="Chat online">☏ Chat</button><label class="field-label" for="player-name">Tên của bạn</label>
+        <label class="field-label" for="room-size">Số người chơi</label><select id="room-size"><option value="3">Phòng tối đa 3 người</option><option value="5">Phòng tối đa 5 người</option><option value="team2">Tổ đội 2 vs 2</option><option value="team3">Tổ đội 3 vs 3</option><option value="team4">Tổ đội 4 vs 4</option><option value="team5">Tổ đội 5 vs 5</option><option value="20">Phòng tối đa 20 người · Rừng Gió</option></select><label class="mode-option"><input type="checkbox" id="respawn-mode" checked> Mọi bản đồ: hồi sinh 3s · tính kill</label><button class="secondary home-chat-icon" id="chat-focus" aria-label="Chat online">☏ Chat</button><label class="field-label" for="player-name">Tên của bạn</label>
         <input id="player-name" maxlength="18" placeholder="Đặt một cái tên dễ thương" autocomplete="nickname" value="">
 <button class="secondary" data-dialog="appearance-dialog">♟ Trang phục</button>
         <div class="home-actions"><button class="primary" id="solo">Chơi ngay <span>→</span></button>
@@ -78,9 +78,11 @@
     <div id="interact-prompt" class="hud-widget" data-hud="interaction" hidden><kbd>E</kbd><span id="interact-text">Nhặt vật phẩm</span></div>
     <div class="desktop-tip"><kbd>WASD</kbd> đi <kbd>Shift</kbd> chạy <kbd>Space</kbd> nhảy <kbd>E</kbd> nhặt/mở <kbd>R</kbd> nạp <kbd>Q</kbd> đổi súng <kbd>H</kbd> hồi phục · C kỹ năng · V ngắm · Esc mở chuột</div>
     <canvas id="minimap" class="hud-widget" data-hud="minimap" width="170" height="170" aria-label="Bản đồ nhỏ"></canvas>
+    <div id="net-stats" role="status" aria-label="Ping và FPS" hidden>Ping: – ms · FPS: –</div>
     <div id="scope-overlay" aria-hidden="true" hidden><i></i><b>3×</b></div>
     <button id="touch-skill" class="round-action compact-action hud-widget ability-button" data-hud="skill" aria-label="Dùng kỹ năng" disabled><span id="skill-icon">✦</span><small id="skill-label">MỞ HÒM</small></button>
     <button id="touch-scope" class="round-action compact-action hud-widget ability-button" data-hud="scope" aria-label="Bật tắt ống ngắm" aria-pressed="false" disabled><span>⊕</span><small id="scope-label">NGẮM</small></button>
+    <button id="camera-lock" class="round-action compact-action hud-widget ability-button" data-hud="camera" aria-label="Khóa camera góc nhìn thứ ba" aria-pressed="true" title="Khóa camera góc nhìn thứ ba"><span id="camera-lock-icon">🔒</span><small id="camera-lock-label">CAM KHÓA</small></button>
     <div id="mouse-lock-hint">Bấm vào cảnh để khóa chuột · Esc mở chuột · Tab cài đặt</div>
     <div id="touch-controls">
       <div id="joystick" class="hud-widget" data-hud="joystick" aria-label="Cần di chuyển"><div id="joystick-knob"></div></div>

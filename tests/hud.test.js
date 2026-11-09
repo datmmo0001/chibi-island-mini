@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { cleanLayouts, defaultWidgets, resolveWidget, layoutMode } from '../public/hud-layout.js';
 import { MAPS, zoneAt } from '../shared.js';
 
-const controls=['timer','alive','tools','compass','health','weapon','minimap','fullscreen','joystick','fire','jump','sprint','pickup','reload','swap','heal','skill','scope'];
+const controls=['timer','alive','tools','compass','health','weapon','minimap','fullscreen','joystick','fire','jump','sprint','pickup','reload','swap','heal','skill','scope','camera'];
 const box=(item,w,h,safe)=>{const p=resolveWidget(item,w,h,safe);return {left:p.x-item.width*p.scale/2,right:p.x+item.width*p.scale/2,top:p.y-item.height*p.scale/2,bottom:p.y+item.height*p.scale/2};};
 test('phone HUD leaves each persistent control separate in both orientations',()=>{
   for(const [w,h,safe={}] of [[320,568],[390,844],[430,932],[568,320],[667,375],[844,390],[915,412],[1280,720],[390,844,{top:44,bottom:34}],[844,390,{left:44,right:44,bottom:21}]]){
@@ -44,4 +44,18 @@ test('photo 7 positions retain user sizes and opacity as landscape defaults',()=
   assert.equal(d.fire.scale,1.45);assert.equal(d.fire.opacity,.65);
   assert.equal(d.skill.scale,1.1);assert.equal(d.skill.opacity,.8);
   assert.equal(d.compass.y,0.09402619949494949);
+});
+
+import { readFileSync } from 'node:fs';
+test('camera lock toggle is wired into the in-match HUD and scene',()=>{
+  const html=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');
+  const client=readFileSync(new URL('../public/client.js',import.meta.url),'utf8');
+  const scene=readFileSync(new URL('../public/scene.js',import.meta.url),'utf8');
+  const block=html.match(/<button id="camera-lock"[^>]*>/);
+  assert.ok(block,'camera-lock button exists in the HUD');
+  for(const attr of ['data-hud="camera"','aria-pressed="true"','aria-label="Khóa camera góc nhìn thứ ba"']) assert.ok(block[0].includes(attr),`button has ${attr}`);
+  assert.ok(client.includes("safeStore.get('chibi-camera-lock', 'on')"),'client restores the saved lock choice');
+  assert.ok(client.includes('world.cameraLock = cameraLock'),'client pushes the state into the scene');
+  assert.ok(scene.includes('this.cameraLock=true'),'scene defaults to locked (current behaviour)');
+  assert.ok(scene.includes('!this.cameraLock&&!this.scoped'),'free camera is skipped while scoped');
 });

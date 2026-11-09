@@ -1,7 +1,7 @@
 import { USER_LANDSCAPE_HUD } from './hud-preset.js';
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 const finite = (n, fallback) => typeof n === 'number' && Number.isFinite(n) ? n : fallback;
-export const HUD_LABELS = Object.freeze({ timer:'Thời gian', alive:'Số người còn lại', tools:'Nút tiện ích', compass:'La bàn', health:'Vòng máu', weapon:'Súng và đạn', minimap:'Bản đồ nhỏ', fullscreen:'Toàn màn hình', joystick:'Cần di chuyển', fire:'Nút bắn', jump:'Nút nhảy', sprint:'Nút chạy', pickup:'Nút nhặt / mở', reload:'Nút nạp đạn', swap:'Nút đổi súng', heal:'Nút hồi máu', skill:'Nút kỹ năng', scope:'Nút ống ngắm', interaction:'Gợi ý nhặt đồ', warning:'Cảnh báo vòng bo', feed:'Thông báo trận' });
+export const HUD_LABELS = Object.freeze({ timer:'Thời gian', alive:'Số người còn lại', tools:'Nút tiện ích', compass:'La bàn', health:'Vòng máu', weapon:'Súng và đạn', minimap:'Bản đồ nhỏ', fullscreen:'Toàn màn hình', joystick:'Cần di chuyển', fire:'Nút bắn', jump:'Nút nhảy', sprint:'Nút chạy', pickup:'Nút nhặt / mở', reload:'Nút nạp đạn', swap:'Nút đổi súng', heal:'Nút hồi máu', skill:'Nút kỹ năng', scope:'Nút ống ngắm',camera:'Nút khóa camera', interaction:'Gợi ý nhặt đồ', warning:'Cảnh báo vòng bo', feed:'Thông báo trận' });
 // The old grouped action row must not override the new independent arc buttons.
 // Keep the old key intact as a rollback; save this revision independently.
 export const HUD_STORAGE = 'chibi-hud-photo-v7';
@@ -17,7 +17,12 @@ export function cleanLayouts(raw) {
 }
 export function defaultWidgets(width, height, touch = true, safe = {}) {
   const defaults=baseWidgets(width,height,touch,safe);
-  if(layoutMode(width,height)==='landscape' && width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)>=780) for(const id of ['compass','joystick','fire','jump','sprint','pickup','skill','scope']) defaults[id]={...defaults[id],...USER_LANDSCAPE_HUD[id]};
+  if(layoutMode(width,height)==='landscape' && width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)>=780) { for(const id of ['compass','joystick','fire','jump','sprint','pickup','skill','scope']) defaults[id]={...defaults[id],...USER_LANDSCAPE_HUD[id]};
+    // Camera-lock toggle hangs off the user's own scope position (right and
+    // slightly down from it, clear of the joystick) so it follows wherever
+    // their saved layout puts scope. Landscape only — the preset is
+    // landscape-only, so this must not leak into portrait defaults.
+    if(USER_LANDSCAPE_HUD.scope){const s=USER_LANDSCAPE_HUD.scope;defaults.camera={...defaults.camera,x:s.x+68/(width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)),y:s.y+28/(height-Math.max(8,safe.top||0)-Math.max(8,safe.bottom||0))};} }
   if(width>height && width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)>=700){
     // Image 7: fire at lower right, sprint above-left, skill further left.
     const positions={fire:[.907,.780],sprint:[.815,.620],skill:[.733,.665],jump:[.805,.800],pickup:[.885,.523],swap:[.952,.563],reload:[.739,.876]};
@@ -47,7 +52,7 @@ function baseWidgets(width, height, touch = true, safe = {}) {
       heal:item(healthX-health/2-30,bottom,44,44),
       reload:item(width*.739,height*.876,44,44),
       minimap:item(mapX,height*.137,mapSize,mapSize),fullscreen:item(width*.862,height*.109,40,40),
-      joystick:item(width*.137,height*.756,104,104),scope:item(width*.192,height*.501,44,44),
+      joystick:item(width*.137,height*.756,104,104),scope:item(width*.192,height*.501,44,44),camera:item(width*.192,height*.610,44,44),
       fire:item(width*.910,height*.780,61.6,61.6),jump:item(width*.810,height*.840,52,52),
       pickup:item(width*.855,height*.559,50,50),sprint:item(width*.926,height*.538,50,50),
       skill:item(Math.min(width*.802,width*.855-55),height*.667,44,44),
@@ -71,7 +76,7 @@ function baseWidgets(width, height, touch = true, safe = {}) {
     pickup:item(fireX-54,fireY-110,50,50),
     swap:item(fireX,fireY-74,44,44),
     skill:item(portrait?fireX:fireX-140,portrait?fireY-166:fireY,44,44),
-    scope:item(portrait?68:100,portrait?fireY-124:height-188,44,44),
+    scope:item(portrait?68:100,portrait?fireY-124:height-188,44,44),camera:item(portrait?152:156,portrait?190:152,40,40),
     interaction:item(compact?width*.37:width/2,compact?height/2-15:height-(touch?(portrait?(height<650?98:421):145):125),compact?Math.min(180,width*.32):Math.min(portrait?220:260,width-32),34),
     warning:item(portrait&&height<650?70:width/2,portrait?180:98,portrait&&height<650?124:Math.min(300,width-28),32),
     feed:item(width-124,portrait?244:170,224,82)

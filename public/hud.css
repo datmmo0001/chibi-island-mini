@@ -18,6 +18,7 @@
 #hud #reload-progress{position:absolute;bottom:0;width:100%;height:3px;margin:0;background:#103b3e70}#hud #reload-progress i{background:#fff1ad}
 #hud #weapon-slots,#hud #medkit-count,#hud .map-meta,#hud .desktop-tip,#hud .look-tip,#hud #marker-hint{display:none}
 #hud #minimap{border:2px solid #fff9;background:#174a3d44;border-radius:50%;box-shadow:0 1px 6px #123b2b55}
+#hud #net-stats{position:fixed;transform:translateX(-50%);z-index:3;pointer-events:none;font-size:10px;font-weight:700;letter-spacing:.3px;color:#fffef0;background:#174e3b88;border:1px solid #ffffff55;border-radius:999px;padding:2px 9px;white-space:nowrap;font-variant-numeric:tabular-nums}
 #hud #touch-controls{display:none}#hud.hud-touch #touch-controls{display:contents}
 #hud #joystick{border:2px solid #fff8;background:#174a3c20;box-shadow:inset 0 0 0 13px #ffffff09;border-radius:50%;touch-action:none;pointer-events:auto}
 #hud #joystick-knob{left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;background:#dfffe961;border:2px solid #fffd;box-shadow:none}
@@ -60,7 +61,7 @@ body.playing #toast{top:29%;bottom:auto;max-width:min(360px,70vw);padding:7px 10
 /* Skills and scope are independent, editable targets, also available on desktop. */
 #hud .ability-button{pointer-events:auto;touch-action:manipulation;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-shadow:inherit}
 #hud #touch-skill{background:#58477688;border-color:#d4bcff}#hud #touch-skill.active{background:#56623aa8;border:2px solid var(--skill-color,#d4bcff)}
-#hud .ability-button:disabled{opacity:calc(var(--hud-opacity,1)*.6);cursor:default}#hud .ability-button small{font-size:6px;white-space:nowrap;line-height:1.2}#hud #touch-scope[aria-pressed=true]{background:#84c4d288;border-color:#d8fcff}
+#hud .ability-button:disabled{opacity:calc(var(--hud-opacity,1)*.6);cursor:default}#hud .ability-button small{font-size:6px;white-space:nowrap;line-height:1.2}#hud #touch-scope[aria-pressed=true]{background:#84c4d288;border-color:#d8fcff}#hud #camera-lock[aria-pressed=true]{background:#84c4d288;border-color:#d8fcff}#hud #camera-lock[aria-pressed=false]{opacity:calc(var(--hud-opacity,1)*.55)}#hud #camera-lock small{font-size:5.5px}
 #scope-overlay{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at center,transparent 0 36vmin,#10292b55 36.3vmin,#0c1d2477 60vmin)}
 #scope-overlay i{position:absolute;width:72vmin;height:72vmin;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid #e2fbdf88;border-radius:50%}#scope-overlay b{position:absolute;top:calc(50% + 28vmin);left:50%;transform:translateX(-50%);font-size:12px;color:#d8f7df}
 #hud [data-hud]{z-index:3}#hud #crosshair{z-index:2}.scoped #crosshair{transform:translate(-50%,-50%) scale(.7)}
@@ -73,7 +74,9 @@ body.playing #toast{top:29%;bottom:auto;max-width:min(360px,70vw);padding:7px 10
 #kill-notice{max-width:clamp(60px,calc(50vw - 220px),180px);overflow-wrap:anywhere}
 
 #home .mode-option{display:flex;align-items:center;gap:9px;font-size:12px;margin:10px 0;line-height:1.4}#home input[type=checkbox]{width:18px;height:18px;min-height:18px;padding:0;margin:0;flex:0 0 18px;accent-color:#477757}.home-chat{margin:12px 0;padding:10px;border:1px solid #c6d8b9;border-radius:10px;font-size:12px}.home-chat summary{cursor:pointer;font-weight:700}.home-chat input{min-height:34px;padding:8px;margin:8px 0}.home-chat button{padding:7px 18px;background:#477757;color:white;border:0;border-radius:8px}
-/* Phone safe-area pass (Ken 2026-11-09): the HUD widget grid is anchored to
-   the full viewport; inset it by the notch / gesture-bar safe areas so
-   buttons never sit under a punch-hole camera or the home indicator. */
-#hud{top:env(safe-area-inset-top,0px);right:env(safe-area-inset-right,0px);bottom:env(safe-area-inset-bottom,0px);left:env(safe-area-inset-left,0px)}
+/* Safe-area handling lives in hud-layout.js: widget positions are stored as
+   fractions of the safe rectangle and resolved against #hud-safe insets.
+   #hud itself must stay pinned to the viewport (inset:0 from style.css) —
+   offsetting it here shifted EVERY in-match button by the left inset on top
+   of the layout system's own adjustment (Ken's "buttons drifted right" bug,
+   release-3 regression, removed 2026-11-09). */

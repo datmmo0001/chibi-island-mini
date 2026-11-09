@@ -5,18 +5,27 @@ import { activeWeapon, resetWorld, equipLoot, interact, reloadWeapon, updateWeap
 import { useSkill, updateSkill } from './skills.js';
 
 const botNames = ['Bông Gòn', 'Kẹo Dẻo', 'Mít Ướt', 'Bắp Rang', 'Mây Nhỏ', 'Nấm Lùn', 'Su Kem'];
+// Sky-bomb waves (Ken 2026-11-09): every 30 s a random wave falls inside the
+// current zone on every map. Damage is 75% of the 100 HP pool at the centre,
+// falling off linearly to 40% of that at the edge of the blast radius.
+export const AIRDROP = Object.freeze({ interval: 30, minPerWave: 3, maxPerWave: 6, fallTime: 1.8, radius: 4, damage: 75 });
+export function bombDamageFor(distance) {
+  if (!(distance <= AIRDROP.radius)) return 0;
+  return Math.round(AIRDROP.damage * (1 - .6 * Math.max(0, distance) / AIRDROP.radius));
+}
 const emptyInput = () => ({ x: 0, z: 0, aim: 0, pitch: 0, fire: false, sprint: false });
 const emptyActions = () => ({ jump: false, interact: false, reload: false, swap: false, heal: false, skill: false });
 export class Room {
   constructor(code, hostId, { random = Math.random, mode = 'party', mapId = 'candy', capacity=3, respawn=false, teamSize=0 } = {}) {
     this.teamSize=[2,3,4,5].includes(teamSize)&&mode!=='solo'?teamSize:0;
-    this.capacity=capacity===5?5:mapId==='frontier'&&capacity===20?20:3;this.respawn=mapId==='candy'&&respawn===true;this.code = code; this.hostId = hostId; this.random = random; this.phase = 'lobby';
+    this.capacity=capacity===5?5:mapId==='frontier'&&capacity===20?20:3;this.respawn=respawn===true;this.code = code; this.hostId = hostId; this.random = random; this.phase = 'lobby';
     if(this.teamSize)this.capacity=this.teamSize*2;
     this.mode = mode === 'solo' ? 'solo' : 'party';
     this.map = getMap(mapId); this.duration = this.map.duration;
     this.players = new Map(); this.bullets = []; this.events = []; this.time = 0;
     this.round = 0; this.seq = 0; this.bulletId = 0; this.winner = null;
     this.markers = []; this.markerSeq = 0;
+    this.bombs = []; this.bombSeq = 0; this.nextBombAt = AIRDROP.interval;
     this.pickups = this.map.pickups.map((p, id) => ({ ...p, id, active: true, cooldown: 0 }));
     resetWorld(this);
     this.emptySince = null; this.createdAt = Date.now();
@@ -47,6 +56,7 @@ export class Room {
     if (!this.humans().length || !this.humans().every(p => p.ready && p.connected))
       throw new Error('Cần ít nhất một người chơi và tất cả bấm Sẵn sàng.');
     this.round++; this.time = 0; this.phase = 'playing'; this.bullets = []; this.events = []; this.winner = null; this.markers = [];
+    this.bombs = []; this.bombSeq = 0; this.nextBombAt = AIRDROP.interval;
     resetWorld(this);
     const fillCount = (this.teamSize?this.capacity:this.capacity===20?20:8) - this.humans().length;
     for (let i = 0; i < fillCount; i++) this.players.set(`bot-${i}`, {
@@ -59,7 +69,7 @@ export class Room {
       if(this.capacity===20){for(let n=0;n<80&&this.map.obstacles.some(o=>obstacleSolid(o,this.obstacles)&&obstacleContains(o,spawn.x,spawn.z,1));n++){spawn.x*=.985;spawn.z*=.985;}}
       if(this.teamSize){const mates=[...this.players.values()].filter(q=>q.team===p.team),index=mates.indexOf(p);const center=this.map.spawnPoints[p.team===1?0:Math.floor(this.map.spawnPoints.length/2)];let found=false;for(let n=0;n<100;n++){const angle=n*2.39996+index*1.2,r=2+index*2+n*.15;const x=center.x+Math.sin(angle)*r,z=center.z+Math.cos(angle)*r;if(Math.hypot(x,z)<this.map.radius-2&&!this.map.obstacles.some(o=>obstacleSolid(o,this.obstacles)&&obstacleContains(o,x,z,1))&&!mates.slice(0,index).some(q=>Math.hypot(q.x-x,q.z-z)<1.5)){spawn.x=x;spawn.z=z;found=true;break;}}if(!found){spawn.x=center.x;spawn.z=center.z;}}
       Object.assign(p, { x: spawn.x, y: 0, z: spawn.z, vy: 0, previousY: 0, grounded: true, aim: Math.PI, pitch: 0,
-        hp: 100, alive: true, kills: 0, cooldown: 0.6 + this.random(), input: emptyInput(), actions: emptyActions(), lastInput: 0, moving: false,
+        hp: 100, alive: true, kills: 0, deaths: 0, cooldown: 0.6 + this.random(), input: emptyInput(), actions: emptyActions(), lastInput: 0, moving: false,
         sprinting: false, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, scope: false, skill: null, effect: null, effectRemaining: 0, climb: null, concealed: false, revealedUntil: 0, lastMarkerAt: -Infinity,
         inventory: this.map.survival ? [] : [{ id: 'water', mag: WEAPONS.water.capacity, reserve: 999 }] });
     });
@@ -101,7 +111,7 @@ export class Room {
       else Object.assign(p, { ready: false, alive: true, hp: 100, kills: 0, input: emptyInput() });
     }
   }
-  zone() { if(this.respawn)return {x:0,z:0,radius:this.map.radius,nextX:0,nextZ:0,nextRadius:this.map.radius,phase:1,shrinking:false,seconds:0,damage:0};return zoneAt(this.map, this.phase === 'lobby' ? 0 : this.time); }
+  zone() { if(this.respawn&&!this.map.survival)return {x:0,z:0,radius:this.map.radius,nextX:0,nextZ:0,nextRadius:this.map.radius,phase:1,shrinking:false,seconds:0,damage:0};return zoneAt(this.map, this.phase === 'lobby' ? 0 : this.time); }
   placeMarker(id, aim) {
     const p = this.players.get(id);
     if (this.phase !== 'playing' || !p || p.bot || !p.alive || !p.connected) throw new Error('Chỉ đánh dấu khi bạn đang trong trận.');
@@ -117,13 +127,25 @@ export class Room {
     this.event('marker', { player: id, text: `${p.name} đã đánh dấu một vị trí`, at: this.time });
     return marker;
   }
+  launchBombWave() {
+    const zone = this.zone(), count = AIRDROP.minPerWave + Math.floor(this.random() * (AIRDROP.maxPerWave - AIRDROP.minPerWave + 1));
+    for (let i = 0; i < count; i++) {
+      const a = this.random() * Math.PI * 2, r = Math.sqrt(this.random()) * Math.max(1, zone.radius * .85);
+      this.bombs.push({ id: ++this.bombSeq, x: zone.x + Math.sin(a) * r, z: zone.z + Math.cos(a) * r, fall: AIRDROP.fallTime, total: AIRDROP.fallTime });
+    }
+    this.event('bombwave', { count, text: 'Bom trời đang rơi! Tránh các vòng đỏ nhé.' });
+  }
+  explodeBomb(b) {
+    this.event('explosion', { x: Math.round(b.x * 100) / 100, z: Math.round(b.z * 100) / 100, radius: AIRDROP.radius });
+    for (const p of this.players.values()) if (p.alive) { const dmg = bombDamageFor(Math.hypot(p.x - b.x, p.z - b.z)); if (dmg > 0) this.damage(p, dmg, null); }
+  }
   radius() { return this.zone().radius; }
   event(type, data) { this.events.push({ id: ++this.seq, type, at:this.time, ...data }); if (this.events.length > 30) this.events.shift(); }
   damage(p, amount, attacker) {
     if (!p.alive || (attacker&&this.teamSize&&this.players.get(attacker)?.team===p.team)) return;
     p.hp = Math.max(0, p.hp - amount);
     if (p.hp <= 0) {
-      p.alive = false; p.moving = false;p.respawnAt=this.time+3;
+      p.alive = false; p.moving = false;p.respawnAt=this.time+3;p.deaths=(p.deaths||0)+1;
       const by = this.players.get(attacker); if (by) by.kills++;
       this.event('out', { player: p.id, attacker, kills:by?.kills||0, text: `${p.name} đã bay lên trời${by ? ` · ${by.name}` : ''}` });
     }
@@ -172,14 +194,17 @@ export class Room {
     if (this.phase !== 'playing') return;
     this.time += dt; const zone = this.zone();
     this.markers = this.markers.filter(m => m.expiresAt > this.time);
+    if (this.time >= this.nextBombAt && this.time < this.duration) { this.launchBombWave(); this.nextBombAt += AIRDROP.interval; }
+    if (this.bombs.length) { const falling = []; for (const b of this.bombs) { b.fall -= dt; if (b.fall <= 0) this.explodeBomb(b); else falling.push(b); } this.bombs = falling; }
     for (const p of this.players.values()) {
       if (!p.bot && !p.connected) {
         p.disconnectedFor += dt;
         if (p.disconnectedFor >= RULES.reconnectSeconds && p.alive) this.damage(p, 1000, null);
       }
       if(!p.alive&&this.respawn&&p.connected&&this.time+1e-6>=p.respawnAt){
-        let spawn=null;for(let n=0;n<64;n++){const a=(this.random()+n*.618034)*Math.PI*2,r=Math.sqrt(this.random())*(this.map.radius-4),x=Math.sin(a)*r,z=Math.cos(a)*r;if(!this.map.obstacles.some(o=>obstacleContains(o,x,z,1))){spawn={x,z};break;}}
-        spawn ||= this.map.spawnPoints[Math.floor(this.random()*this.map.spawnPoints.length)];
+        const zc=this.zone(),inside=this.map.spawnPoints.filter(s=>Math.hypot(s.x-zc.x,s.z-zc.z)<zc.radius-1);
+        let spawn=null;for(let n=0;n<64;n++){const a=(this.random()+n*.618034)*Math.PI*2,r=Math.sqrt(this.random())*Math.max(1,zc.radius-2),x=zc.x+Math.sin(a)*r,z=zc.z+Math.cos(a)*r;if(Math.hypot(x,z)<this.map.radius-2&&!this.map.obstacles.some(o=>obstacleContains(o,x,z,1))){spawn={x,z};break;}}
+        spawn ||= inside.length?inside[Math.floor(this.random()*inside.length)]:{x:zc.x,z:zc.z};
         Object.assign(p,{...spawn,y:0,previousY:0,vy:0,hp:100,alive:true,grounded:true,moving:false,sprinting:false,climb:null,effect:null,effectRemaining:0,concealed:false,reload:0,cooldown:1,input:emptyInput(),actions:emptyActions()});
       }
       if (!p.alive) continue;
@@ -212,14 +237,14 @@ export class Room {
     if(this.teamSize){
       const standing=new Set(alive.map(p=>p.team));
       if((!this.respawn&&standing.size<=1)||this.time>=this.duration){
-        const scores=[1,2].map(team=>{const all=[...this.players.values()].filter(p=>p.team===team);return{team,kills:all.reduce((n,p)=>n+p.kills,0),alive:all.filter(p=>p.alive).length,hp:all.reduce((n,p)=>n+(p.alive?p.hp:0),0)};});
-        scores.sort((a,b)=>(this.respawn?b.kills-a.kills:b.alive-a.alive)||b.hp-a.hp||b.kills-a.kills);
+        const scores=[1,2].map(team=>{const all=[...this.players.values()].filter(p=>p.team===team);return{team,kills:all.reduce((n,p)=>n+p.kills,0),deaths:all.reduce((n,p)=>n+(p.deaths||0),0),alive:all.filter(p=>p.alive).length,hp:all.reduce((n,p)=>n+(p.alive?p.hp:0),0)};});
+        scores.sort((a,b)=>(this.respawn?b.kills-a.kills||a.deaths-b.deaths:b.alive-a.alive)||b.hp-a.hp||b.kills-a.kills);
         const [a,b]=scores,tie=a.kills===b.kills&&a.alive===b.alive&&a.hp===b.hp;
         this.winner=tie?null:{team:a.team,name:`Đội ${a.team===1?'Xanh':'Cam'}`,kills:a.kills};
         this.phase='finished';this.bullets=[];this.event('finish',{text:this.winner?`${this.winner.name} chiến thắng!`:'Hai đội hòa nhau!'});
       }
     }else if ((!this.respawn&&alive.length <= 1) || this.time >= this.duration) {
-      const winner = (this.respawn?[...this.players.values()]:alive).sort((a, b) => (this.respawn?b.kills-a.kills:0)||b.hp - a.hp || b.kills - a.kills || a.id.localeCompare(b.id))[0];
+      const winner = (this.respawn?[...this.players.values()]:alive).sort((a, b) => (this.respawn?b.kills-a.kills||(a.deaths||0)-(b.deaths||0):0)||b.hp - a.hp || b.kills - a.kills || a.id.localeCompare(b.id))[0];
       this.phase = 'finished'; this.winner = winner ? { id: winner.id, name: winner.name, bot: winner.bot } : null;
       this.bullets = []; this.event('finish', { text: winner ? `${winner.name} chiến thắng!` : 'Hòa cả làng!' });
     }
@@ -227,8 +252,9 @@ export class Room {
   snapshot() {
     return { type: 'state', code: this.code, phase: this.phase, mode: this.mode, capacity:this.capacity, teamSize:this.teamSize, respawn:this.respawn, hostId: this.hostId, round: this.round,
       mapId: this.map.id, duration: this.duration, time: Math.round(this.time * 100) / 100, radius: this.radius(), zone: this.zone(), winner: this.winner, markers: this.markers.map(m => ({ ...m })),
-      players: [...this.players.values()].map(({ id, name, bot, team, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining, concealed, climb }) =>
-        ({ id, name, bot, team, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
+      players: [...this.players.values()].map(({ id, name, bot, team, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, deaths, respawnAt, ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining, concealed, climb }) =>
+        ({ id, name, bot, team, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, deaths: deaths||0, respawnIn: alive?0:Math.max(0, Math.round(((respawnAt||0) - this.time) * 10) / 10), ready, connected, moving, grounded, sprinting, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
+      bombs: this.bombs.map(({ id, x, z, fall, total }) => ({ id, x: +x.toFixed(2), z: +z.toFixed(2), fall: +fall.toFixed(2), total })),
       bullets: this.bullets.map(({ id, owner, weapon, x, y, z, vx, vy, vz, speed }) => ({ id, owner, weapon, x, y, z, vx, vy, vz, speed })),
       loot: this.loot.filter(l => l.active), obstacles: [...this.obstacles.values()].filter(s => s.open || s.destroyed || s.hp < s.maxHp),
       pickups: this.pickups.map(({ id, x, z, active }) => ({ id, x, z, active })), events: this.events };
