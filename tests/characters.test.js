@@ -14,3 +14,12 @@ test('anime selections survive authoritative room snapshots, squad start and rem
  r.phase='finished';r.backToLobby('a');
  assert.ok(r.snapshot().players.every(p=>OUTFITS.some(o=>o.id===p.outfit)));
 });
+test('model mascots ajo and strawberry are registered outfits with matching VRM entries',async()=>{
+ const models=OUTFITS.filter(o=>o.model);assert.deepEqual(models.map(o=>o.id).sort(),['ajo','anna','juanita','strawberry']);
+ for(const o of models){assert.equal(o.model,o.id);assert.ok(o.name&&o.color&&o.light&&o.accent&&o.hair&&o.eye);}
+ const source=await readFile(new URL('../public/model-avatar.js',import.meta.url),'utf8');
+ for(const o of models){assert.ok(source.includes(`url: '/models/${o.model}.vrm'`),`model-avatar.js missing ${o.model}`);}
+ const r=new Room('MASCOT','a',{teamSize:3,mapId:'candy'});
+ r.addHuman('a','Kỳ Giông','ajo');r.addHuman('b','Dâu Tây','strawberry');r.configure('a',{ready:true});r.configure('b',{ready:true});r.start('a');
+ assert.deepEqual(r.snapshot().players.filter(p=>!p.bot).map(p=>p.outfit).sort(),['ajo','strawberry']);
+});

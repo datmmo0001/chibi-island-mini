@@ -23,7 +23,9 @@ export const OUTFITS = [
   {id:'haru',name:'Haru · Lữ Khách Nắng',anime:true,color:'#e6ad51',light:'#fff5d7',accent:'#528275',hair:'#705444',eye:'#71954a'},
   {id:'miku',name:'Miku · Ca Sĩ Xanh Ngọc',anime:true,color:'#46525e',light:'#eef7f7',accent:'#14b8a6',hair:'#2ec4b6',eye:'#0e9fd8'},
   {id:'juanita',name:'Juanita · Chibi CC0',model:'juanita',color:'#8fce5a',light:'#fff6ec',accent:'#ef7fa8',hair:'#f2a0c4',eye:'#a03d63'},
-  {id:'anna',name:'Anna · Chibi CC0',model:'anna',color:'#e8a2b8',light:'#fff2f5',accent:'#8a5a72',hair:'#e8b4c4',eye:'#7a4a5e'}
+  {id:'anna',name:'Anna · Chibi CC0',model:'anna',color:'#e8a2b8',light:'#fff2f5',accent:'#8a5a72',hair:'#e8b4c4',eye:'#7a4a5e'},
+  {id:'ajo',name:'Kỳ Giông Hồng',model:'ajo',color:'#f2a0b5',light:'#ffeef3',accent:'#8a4a63',hair:'#ef8fa5',eye:'#5e2f42'},
+  {id:'strawberry',name:'Công Chúa Dâu Tây',model:'strawberry',color:'#e5484d',light:'#ffe9e4',accent:'#3f9142',hair:'#e5484d',eye:'#5b2a1e'}
 ];
 export const HATS = ['ears', 'cap', 'leaf'];
 export const MAP = Object.freeze({
@@ -90,6 +92,51 @@ function meadowMap() {
       { wait: 20, shrink: 90, radius: 5, x: 4, z: 8, damage: 14 }
     ] });
 }
+function beachMap() {
+  let seed = 20261217;
+  const random = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; };
+  const radius = 31 * Math.sqrt(20), obstacles = [], loot = [];
+  const spawnPoints = Array.from({ length: 8 }, (_, i) => ({ x: Math.sin(i * Math.PI / 4) * 78, z: Math.cos(i * Math.PI / 4) * 78 }));
+  const add = o => obstacles.push({ id: `b-${obstacles.length}`, walkable: true, ...o });
+  const drop = (x, z, type, weapon) => loot.push({ id: `b-loot-${loot.length}`, x, z, y: 0, type, weapon });
+  const regions = [{ x: -65, z: -42, name: 'Bãi Cọ' }, { x: 64, z: -44, name: 'Vịnh San Hô' }, { x: -61, z: 49, name: 'Đồi Cát' }, { x: 62, z: 55, name: 'Bến Thuyền' }, { x: 0, z: 4, name: 'Quảng Trường Cát' }, { x: 0, z: -96, name: 'Mũi Đá' }];
+  spawnPoints.forEach((p, i) => {
+    drop(p.x, p.z - 2.5, 'weapon', 'water'); drop(p.x + 1.8, p.z - 2.5, 'ammo'); drop(p.x - 2, p.z - 2, 'heal');
+    add({ x: p.x - 5, z: p.z - 5, r: 2, h: 1.25, kind: 'platform' });
+    add({ x: p.x - 8, z: p.z - 5, r: 1.8, h: 2.8, kind: 'platform' });
+    add({ x: p.x + 5, z: p.z - 4, r: .85, h: 1.1, kind: 'chest', interactive: true });
+  });
+  regions.forEach((p, i) => {
+    add({ x: p.x - 6, z: p.z, r: 3.1, h: 1.4, kind: 'platform' });
+    add({ x: p.x - 10, z: p.z, r: 2.3, h: 3, kind: 'platform' });
+    add({ x: p.x + 4, z: p.z - 3, r: 1, h: 1.2, kind: 'chest', interactive: true });
+    add({ x: p.x + 7, z: p.z + 2, r: 1, h: 1.4, kind: 'crate', destructible: true, hp: 48 });
+    add({ x: p.x + 2, z: p.z + 6, r: 1.6, h: 2.5, kind: 'gate', interactive: true, walkable: false });
+    add({ x: p.x + 6, z: p.z + 6, r: 1.7, h: 2.5, kind: 'wall' });
+    add({ x: p.x - 2, z: p.z + 6, r: 1.7, h: 2.5, kind: 'wall' });
+    drop(p.x, p.z, 'weapon', ['spray', 'candy', 'bubble'][i % 3]);
+    drop(p.x + 2, p.z, 'ammo'); drop(p.x - 2, p.z - 1, 'heal');
+  });
+  for (let i = 0; i < 190; i++) {
+    const a = random() * Math.PI * 2, r = Math.sqrt(random()) * (radius - 9), x = Math.sin(a) * r, z = Math.cos(a) * r;
+    if (spawnPoints.some(p => Math.hypot(x - p.x, z - p.z) < 12) || regions.some(p => Math.hypot(x - p.x, z - p.z) < 16) || obstacles.some(o => Math.hypot(x - o.x, z - o.z) < o.r + 2.8)) continue;
+    const kind = i % 9 === 0 ? 'crate' : i % 4 === 0 ? 'rock' : i % 6 === 0 ? 'bush' : 'tree';
+    add({ x, z, r: kind === 'tree' ? .85 : kind === 'bush' ? 2.6 : 1.1 + random(), h: kind === 'tree' ? 6 + random() * 2 : kind === 'bush' ? 3.4 : 1.2 + random() * .8,
+      kind, solid: kind !== 'bush', walkable: kind === 'rock' || kind === 'crate', destructible: kind === 'crate', hp: kind === 'crate' ? 48 : undefined });
+    if (i % 8 === 0) drop(x + 3, z, 'weapon', Object.keys(WEAPONS)[i % 4]);
+    if (i % 6 === 0) drop(x - 2.8, z, i % 12 === 0 ? 'ammo' : 'heal');
+  }
+  const safeObstacles = obstacles.filter(o => spawnPoints.every(p => Math.hypot(p.x - o.x, p.z - o.z) > o.r + RULES.playerRadius + 1));
+  return Object.freeze({ id: 'beach', name: 'Đảo Bãi Cát', radius, duration: 600, survival: true, areaMultiplier: 20,
+    obstacles: safeObstacles, loot, pickups: [], spawnPoints, regions,
+    zones: [
+      { wait: 55, shrink: 75, radius: 96, x: 15, z: -12, damage: 2 },
+      { wait: 45, shrink: 75, radius: 64, x: 2, z: -6, damage: 4 },
+      { wait: 35, shrink: 75, radius: 36, x: -8, z: 5, damage: 6 },
+      { wait: 25, shrink: 75, radius: 16, x: 0, z: 8, damage: 9 },
+      { wait: 20, shrink: 90, radius: 5, x: 4, z: 8, damage: 14 }
+    ] });
+}
 function frontierMap() {
   let seed=862410;
   const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return(seed>>>0)/4294967296;};
@@ -139,7 +186,7 @@ function frontierMap() {
     zones:[{wait:55,shrink:75,radius:132,x:12,z:-10,damage:2},{wait:45,shrink:75,radius:86,x:2,z:-5,damage:4},
       {wait:35,shrink:75,radius:49,x:-7,z:4,damage:6},{wait:25,shrink:75,radius:22,x:0,z:7,damage:9},{wait:20,shrink:90,radius:6,x:3,z:7,damage:14}]});
 }
-export const MAPS = Object.freeze({ candy: MAP, meadow: meadowMap(), frontier: frontierMap() });
+export const MAPS = Object.freeze({ candy: MAP, meadow: meadowMap(), frontier: frontierMap(), beach: beachMap() });
 export const getMap = id => MAPS[id] || MAPS.meadow;
 export const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 export const obstacleSolid = (o, states) => { const s = states?.get?.(o.id) || states?.[o.id]; return o.solid !== false && !s?.destroyed && !(o.kind === 'gate' && s?.open); };

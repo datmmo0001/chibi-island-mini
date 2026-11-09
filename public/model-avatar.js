@@ -39,6 +39,37 @@ const MODELS = {
       leftUpperArm: [0, -94, 12], leftLowerArm: [0, -58, -5],
     },
   },
+  // StrawberryPrincess (100 Avatars R3 #291, CC0): a mascot, not a person —
+  // long stick arms hang off a giant head-body and a leaf collar swallows
+  // the gun at chest height, so the mount sits low and near centre where
+  // both stick hands can converge (solved with tools/probe-strawberry.mjs:
+  // right hand 0.012 off the grip, left hand 0.001 off the gun body). The
+  // blaster still overlaps the lowest leaf tips at this height; that is
+  // the price of a two-handed hold on this skeleton.
+  strawberry: {
+    url: '/models/strawberry.vrm',
+    gun: [-.06, 1.15, .54],
+    pose: {
+      spine: [-10, 0, 0], neck: [4, 0, 0], head: [8, 0, 0],
+      rightUpperArm: [0, 124, -18], rightLowerArm: [0, 38, -3],
+      leftUpperArm: [0, -126, 9], leftLowerArm: [0, -45, -2],
+    },
+  },
+  // AjoMajo (100 Avatars R3 #282, CC0): axolotl mascot with near-human
+  // proportions but very short arms (0.48 vs Juanita's ~0.55), so the gun
+  // rides high and close (mount/pose solved with tools/probe-ajo.mjs:
+  // right hand 0.020 off the grip). Her left arm is 0.145 short of the
+  // standard support point no matter the mount — the hand rests against
+  // the gun's rear body instead; that is this skeleton's physical limit.
+  ajo: {
+    url: '/models/ajo.vrm',
+    gun: [-.14, 1.5, .54],
+    pose: {
+      spine: [-10, 0, 0], neck: [4, 0, 0], head: [8, 0, 0],
+      rightUpperArm: [0, 124, 3], rightLowerArm: [0, -8, -5],
+      leftUpperArm: [0, -142, -16], leftLowerArm: [0, 3, 0],
+    },
+  },
 };
 const TARGET_HEIGHT = 2.7; // same height as the procedural avatars (Ken approved scaling up from 2.45)
 const bytesCache = new Map();
