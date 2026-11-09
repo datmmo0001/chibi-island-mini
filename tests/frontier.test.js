@@ -67,7 +67,7 @@ test('concealment avoids distant bot targets and firing reveals the player tempo
 });
 test('every skill and scope can be looted from a chest only once, cannot be fabricated by input',()=>{
   for(const [i,id]of Object.keys(SKILLS).entries()){
-    const room=roomForForest(()=> (i+.1)/5),p=room.players.get('me'),chest=room.map.obstacles.find(o=>o.kind==='chest');
+    const room=roomForForest(()=> (i+.1)/Object.keys(SKILLS).length),p=room.players.get('me'),chest=room.map.obstacles.find(o=>o.kind==='chest');
     room.loot.forEach(l=>l.active=false);Object.assign(p,{x:chest.x,z:chest.z+2.5});const before=room.loot.length;interact(room,p);
     assert.equal(room.loot.length,before+5);const skill=room.loot.find(l=>l.active&&l.type==='skill');assert.equal(skill.weapon,id);
     Object.assign(p,{x:skill.x,z:skill.z});assert.equal(equipLoot(room,p,skill),true);assert.equal(p.skill,id);
@@ -91,14 +91,20 @@ test('flight lifts above roofs for five seconds then falls, cannot tunnel throug
 });
 test('regeneration heals over five seconds only and 2x damage expires exactly',()=>{
   const room=roomForForest(),p=room.players.get('me');Object.assign(p,actor(),{skill:'regen'});useSkill(room,p);updateSkill(p,1);assert.equal(p.hp,36);updateSkill(p,3.5);assert.equal(p.hp,92);updateSkill(p,.5);assert.equal(p.hp,100);updateSkill(p,2);assert.equal(p.hp,100);
-  p.skill='power';useSkill(room,p);p.inventory=[{id:'water',mag:18,reserve:54}];p.slot=0;p.cooldown=0;p.reload=0;p.aim=0;
+  p.skill='power';p.skillReadyAt=0;useSkill(room,p); // skillReadyAt fast-forwarded: a fresh use normally waits out the 30 s skill cooldown
+  p.inventory=[{id:'water',mag:18,reserve:54}];p.slot=0;p.cooldown=0;p.reload=0;p.aim=0;
   shoot(room,p);assert.equal(room.bullets.at(-1).damage,32);updateSkill(p,4);p.cooldown=0;shoot(room,p);assert.equal(room.bullets.at(-1).damage,32);updateSkill(p,1);p.cooldown=0;shoot(room,p);assert.equal(room.bullets.at(-1).damage,16);
 });
-test('rocket pierces cover and multiple players, damages each only once and crosses the island',()=>{
+test('rocket skill explodes on first cover for 100 blast damage and never pierces',()=>{
   const room=roomForForest(),p=room.players.get('me');room.map={...room.map,radius:196,obstacles:[{id:'wall',x:0,z:10,hx:5,hz:1,r:5,h:8,shape:'box'}]};
   Object.assign(p,{x:0,y:0,z:-180,aim:0,pitch:0,skill:'rocket'});for(const q of room.players.values())if(q!==p)Object.assign(q,{x:100,z:100});
-  const a=room.players.get('bot-0'),b=room.players.get('bot-1');Object.assign(a,{x:0,z:30});Object.assign(b,{x:0,z:80});
+  const near=room.players.get('bot-0'),far=room.players.get('bot-1');Object.assign(near,{x:2,z:10.5,y:0});Object.assign(far,{x:0,z:30,y:0});
   assert.ok(useSkill(room,p));assert.equal(useSkill(room,p),false);
-  let maxZ=-180;for(let i=0;i<100;i++){advanceBullets(room,1/30);maxZ=Math.max(maxZ,...room.bullets.map(q=>q.z));}
-  assert.equal(a.hp,35);assert.equal(b.hp,35);assert.ok(maxZ>196);assert.equal(room.bullets.length,0);
+  const shell=room.bullets.at(-1);assert.equal(shell.damage,100);assert.equal(shell.blast,3);assert.ok(!shell.piercing);
+  for(let i=0;i<100;i++)advanceBullets(room,1/30);
+  assert.equal(room.bullets.length,0,'rocket is consumed by the explosion');
+  assert.equal(near.hp,0,'enemy inside the blast radius at the wall dies (100 damage)');
+  assert.equal(far.hp,100,'enemy behind the wall, outside the blast radius, is untouched');
+  assert.ok(room.events.some(e=>e.type==='explosion'),'explosion event emitted for client effects');
+  assert.equal(p.kills,1);
 });

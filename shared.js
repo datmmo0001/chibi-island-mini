@@ -4,14 +4,21 @@ export const WEAPONS = Object.freeze({
   water: { id: 'water', name: 'Súng nước', damage: 16, speed: 58, interval: .28, capacity: 18, reserve: 54, reload: 1.3, life: 1.3, spread: .018, pellets: 1, color: '#42eaff' },
   spray: { id: 'spray', name: 'Vòi phun liên thanh', damage: 10, speed: 54, interval: .12, capacity: 28, reserve: 84, reload: 1.65, life: 1.1, spread: .055, pellets: 1, color: '#ffe45b' },
   candy: { id: 'candy', name: 'Kẹo chùm', damage: 10, speed: 52, interval: .82, capacity: 6, reserve: 24, reload: 1.8, life: .64, spread: .15, pellets: 5, color: '#ff95e8' },
-  bubble: { id: 'bubble', name: 'Bong bóng tầm xa', damage: 34, speed: 78, interval: .85, capacity: 8, reserve: 24, reload: 1.7, life: 1.4, spread: .008, pellets: 1, color: '#b3ff75' }
+  bubble: { id: 'bubble', name: 'Bong bóng tầm xa', damage: 34, speed: 78, interval: .85, capacity: 8, reserve: 24, reload: 1.7, life: 1.4, spread: .008, pellets: 1, color: '#b3ff75' },
+  rocket: { id: 'rocket', name: 'Tên lửa URF', damage: 100, speed: 95, interval: 2, capacity: 60, reserve: 999, reload: 1.2, life: 6, spread: 0, pellets: 1, color: '#ff9b58' }
 });
+// Rocket blast radius (URF gun + rocket skill). The blast DIAMETER (6) is
+// ~4x a normal bullet's effective hit diameter (player diameter 1.3 plus
+// the small collision padding normal bullets get).
+export const ROCKET_BLAST = 3;
 export const SKILLS = Object.freeze({
   dash: { name:'Lướt gió', icon:'»', duration:5, color:'#71eeff', description:'Tốc độ ×3 trong 5 giây' },
   flight: { name:'Cánh trời', icon:'↟', duration:5, color:'#d6b1ff', description:'Bật lên cao và bay trong 5 giây' },
   regen: { name:'Suối lành', icon:'✚', duration:5, color:'#89ffb4', description:'Hồi 16 máu mỗi giây trong 5 giây' },
   power: { name:'Hỏa lực', icon:'×2', duration:5, color:'#ffca6f', description:'Sát thương súng ×2 trong 5 giây' },
-  rocket: { name:'Tên lửa xuyên phá', icon:'➤', duration:0, color:'#ff947b', description:'Tên lửa xuyên vật cản và người, 65 sát thương mỗi người' }
+  rocket: { name:'Tên lửa', icon:'➤', duration:0, color:'#ff947b', description:'Tên lửa nổ diện rộng khi chạm, 100 sát thương' },
+  shrink: { name:'Thu nhỏ', icon:'⇊', duration:5, color:'#8ef1d4', description:'Người còn 30%, chạy nhanh hơn 30% trong 5 giây' },
+  grow: { name:'Phóng to', icon:'⇈', duration:5, color:'#ffb37b', description:'Người to thêm 50%, sát thương tăng 50% trong 5 giây' }
 });
 export const OUTFITS = [
   { id: 'bear', name: 'Gấu Caramel', color: '#c98b57', light: '#ffe3b9', accent: '#734c39' },
@@ -186,7 +193,19 @@ function frontierMap() {
     zones:[{wait:55,shrink:75,radius:132,x:12,z:-10,damage:2},{wait:45,shrink:75,radius:86,x:2,z:-5,damage:4},
       {wait:35,shrink:75,radius:49,x:-7,z:4,damage:6},{wait:25,shrink:75,radius:22,x:0,z:7,damage:9},{wait:20,shrink:90,radius:6,x:3,z:7,damage:14}]});
 }
-export const MAPS = Object.freeze({ candy: MAP, meadow: meadowMap(), frontier: frontierMap(), beach: beachMap() });
+function urfMap() {
+  // URF mode (Ken 2026-11-09): an open arena the size of meadow with NO
+  // obstacles at all - rockets only (WEAPONS.rocket), 2 s between shots,
+  // and forced respawn (the Room forces respawn on for this map). The one
+  // zone phase never advances (wait is effectively infinite), so zoneAt
+  // never reaches the shrink:0 division.
+  const radius = 31 * Math.sqrt(20);
+  const spawnPoints = Array.from({ length: 8 }, (_, i) => ({ x: Math.sin(i * Math.PI / 4) * 78, z: Math.cos(i * Math.PI / 4) * 78 }));
+  return Object.freeze({ id: 'urf', name: 'Chế độ URF', radius, duration: 300, survival: false, areaMultiplier: 20, urf: true,
+    obstacles: [], loot: [], pickups: [], spawnPoints, regions: [{ x: 0, z: 0, name: 'Đấu Trường URF' }],
+    zones: [{ wait: 1e9, shrink: 0, radius: 9999, x: 0, z: 0, damage: 0 }] });
+}
+export const MAPS = Object.freeze({ candy: MAP, meadow: meadowMap(), frontier: frontierMap(), beach: beachMap(), urf: urfMap() });
 export const getMap = id => MAPS[id] || MAPS.meadow;
 export const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
 export const obstacleSolid = (o, states) => { const s = states?.get?.(o.id) || states?.[o.id]; return o.solid !== false && !s?.destroyed && !(o.kind === 'gate' && s?.open); };
@@ -233,7 +252,7 @@ export function stepActor(actor,input,dt,map,states){
   else {if(input.jump&&actor.grounded){actor.vy=RULES.jumpSpeed;actor.grounded=false;}actor.vy=(actor.vy||0)-RULES.gravity*dt;}
   actor.y=previousY+actor.vy*dt;
   for(const o of map.obstacles)if((o.base||0)>0&&obstacleSolid(o,states)&&obstacleContains(o,actor.x,actor.z,RULES.playerRadius*.5)&&previousY+2.65<=o.base+.04&&actor.y+2.65>=o.base&&actor.vy>0){actor.y=o.base-2.65;actor.vy=0;}
-  const boost=actor.effect==='dash'&&actor.effectRemaining>0?3:1;
+  const boost=(actor.effect==='dash'&&actor.effectRemaining>0?3:1)*(actor.effect==='shrink'&&actor.effectRemaining>0?1.3:1);
   moveActor(actor,input.x,input.z,dt,map,states,RULES.speed*(input.dashing?RULES.dashSpeedMultiplier:input.sprint?RULES.sprintMultiplier:1)*boost*(input.aiming?.65:1));
   // Stop upward motion at the underside of a raised platform.
   for(const o of map.obstacles)if((o.base||0)>0&&obstacleSolid(o,states)&&obstacleContains(o,actor.x,actor.z,RULES.playerRadius*.5)&&previousY+2.65<=o.base+.04&&actor.y+2.65>=o.base&&actor.vy>0){actor.y=o.base-2.65;actor.vy=0;}

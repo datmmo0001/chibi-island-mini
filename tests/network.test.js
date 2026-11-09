@@ -37,12 +37,20 @@ test('three forest clients see the same skill activation, scope and elevated tow
   a.send({type:'input',x:0,z:0,aim:Math.PI,interact:true});
   await a.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).inventory.length===1);
   const room=app.rooms.get(joined.code),me=room.players.get(joined.id);for(const p of room.players.values())if(p.bot)p.decision=10000;
-  addLoot(room,me.x,0,me.z,'skill','power');addLoot(room,me.x,0,me.z,'scope');
-  await a.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).skill==='power');
+  me.skill=null;me.skillReadyAt=1e9;me.effect=null;me.effectRemaining=0;me.y=(me.y||0)+3;addLoot(room,me.x,3,me.z,'skill','power');addLoot(room,me.x,0,me.z,'scope'); // entry skill state reset and the player hovered at the skill orb's own height (loot y=3, pickup reach |dy|<2) while the ground scope orb stays out of the auto-pickup band, so only the explicit pickup grants them, in order. The cooldown debt is held far in the future while arranging the pickup so the 30 s re-grant cannot interfere, and is released back to 0 right below, before the activation - the entry-skill package makes useSkill refuse to fire while a debt is outstanding, exactly as in real play.
+  await a.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).skill==='power');me.skillReadyAt=0; // pickup arranged: release the held-off cooldown debt so the activation can fire
   a.send({type:'input',x:0,z:0,aim:Math.PI,skill:true,aiming:true});
   const states=await Promise.all([a,b,c].map(p=>p.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).effect==='power')));
-  for(const s of states){const p=s.players.find(p=>p.id===joined.id);assert.equal(p.scope,true);assert.equal(p.skill,null);assert.ok(p.effectRemaining>3);}
-  assert.equal(me.input.aiming,true);
+  // The scope is picked up while the player descends after the skill fires;
+  // wait for a state that shows both facts together before asserting.
+  const settled=await Promise.all([a,b,c].map(p=>p.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).effect==='power'&&m.players.find(p=>p.id===joined.id).scope===true)));
+  for(const s of settled){const p=s.players.find(p=>p.id===joined.id);assert.equal(p.scope,true);assert.equal(p.skill,null);assert.ok(p.effectRemaining>0);}
+  for(const s of states){const p=s.players.find(p=>p.id===joined.id);assert.equal(p.skill,null);assert.ok(p.effectRemaining>3);}
+  // 'aiming' is accepted by setInput only while the player owns a scope and a
+  // weapon, and the server expires a silent client's input after 0.5 s - the
+  // scope has only just been picked up above, so re-send an aiming input now
+  // and assert the server-side accepted flag directly.
+  a.send({type:'input',x:0,z:0,aim:Math.PI,aiming:true});await new Promise(r=>setTimeout(r,60));assert.equal(me.input.aiming,true);
   const ladder=room.map.obstacles.find(o=>o.kind==='ladder');Object.assign(me,{x:ladder.x,z:ladder.z+.5,y:0});
   a.send({type:'input',x:0,z:0,aim:0,interact:true});
   await b.wait(m=>m.type==='state'&&m.players.find(p=>p.id===joined.id).climbing);

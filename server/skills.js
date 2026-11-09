@@ -1,13 +1,14 @@
-import { SKILLS, clamp } from '../shared.js';
+import { SKILLS, ROCKET_BLAST, clamp } from '../shared.js';
 
 export function useSkill(room,p){
   const id=p.skill,definition=SKILLS[id];
   if(!p.alive||!definition||p.effectRemaining>0||p.climb)return false;
-  p.skill=null;p.revealedUntil=room.time+1.5;
+  if(room.time<(p.skillReadyAt||0))return false;
+  p.skill=null;p.skillReadyAt=room.time+30;p.revealedUntil=room.time+1.5;
   if(id==='rocket'){
     const pitch=clamp(p.pitch||0,-1.1,1.1),vx=Math.sin(p.aim)*Math.cos(pitch),vz=Math.cos(p.aim)*Math.cos(pitch),vy=Math.sin(pitch);
-    room.bullets.push({id:++room.bulletId,owner:p.id,weapon:'rocket',damage:65,speed:120,x:p.x+vx*.9,y:p.y+1.3,z:p.z+vz*.9,
-      vx,vy,vz,life:(room.map.radius*2+30)/120,piercing:true,hitPlayers:new Set()});
+    room.bullets.push({id:++room.bulletId,owner:p.id,weapon:'rocket',damage:100,speed:120,x:p.x+vx*.9,y:p.y+1.3,z:p.z+vz*.9,
+      vx,vy,vz,life:(room.map.radius*2+30)/120,blast:ROCKET_BLAST,hitPlayers:new Set()});
     p.shots++;
   }else{
     p.effect=id;p.effectRemaining=definition.duration;

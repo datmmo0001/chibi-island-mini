@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { RULES, OUTFITS, HATS, WEAPONS, getMap, clamp, stepActor, visible, zoneAt, obstacleSolid, obstacleContains, concealedAt } from '../shared.js';
+import { RULES, OUTFITS, HATS, WEAPONS, SKILLS, getMap, clamp, stepActor, visible, zoneAt, obstacleSolid, obstacleContains, concealedAt } from '../shared.js';
 import { activeWeapon, resetWorld, equipLoot, interact, reloadWeapon, updateWeapon, healPlayer, shoot, advanceBullets } from './survival.js';
 
 import { useSkill, updateSkill } from './skills.js';
+
+const SKILL_IDS = Object.keys(SKILLS);
 
 const botNames = ['Bông Gòn', 'Kẹo Dẻo', 'Mít Ướt', 'Bắp Rang', 'Mây Nhỏ', 'Nấm Lùn', 'Su Kem'];
 // Sky-bomb waves (Ken 2026-11-09): every 30 s a random wave falls inside the
@@ -21,9 +23,9 @@ export class Room {
     this.capacity=capacity===5?5:mapId==='frontier'&&capacity===20?20:3;this.respawn=respawn===true;this.code = code; this.hostId = hostId; this.random = random; this.phase = 'lobby';
     if(this.teamSize)this.capacity=this.teamSize*2;
     this.mode = mode === 'solo' ? 'solo' : 'party';
-    this.map = getMap(mapId); this.duration = this.map.duration;
+    this.map = getMap(mapId); this.duration = this.map.duration; if (this.map.urf) this.respawn = true; // URF always plays respawn mode (back in 3 s, ranked by kills)
     this.players = new Map(); this.bullets = []; this.events = []; this.time = 0;
-    this.round = 0; this.seq = 0; this.bulletId = 0; this.winner = null;
+    this.round = 0; this.seq = 0; this.bulletId = 0; this.winner = null; this.lastKillerId = null;
     this.markers = []; this.markerSeq = 0;
     this.bombs = []; this.bombSeq = 0; this.nextBombAt = AIRDROP.interval;
     this.pickups = this.map.pickups.map((p, id) => ({ ...p, id, active: true, cooldown: 0 }));
@@ -55,7 +57,7 @@ export class Room {
     if (this.phase !== 'lobby') throw new Error('Trận đã bắt đầu.');
     if (!this.humans().length || !this.humans().every(p => p.ready && p.connected))
       throw new Error('Cần ít nhất một người chơi và tất cả bấm Sẵn sàng.');
-    this.round++; this.time = 0; this.phase = 'playing'; this.bullets = []; this.events = []; this.winner = null; this.markers = [];
+    this.round++; this.time = 0; this.phase = 'playing'; this.bullets = []; this.events = []; this.winner = null; this.lastKillerId = null; this.markers = [];
     this.bombs = []; this.bombSeq = 0; this.nextBombAt = AIRDROP.interval;
     resetWorld(this);
     const fillCount = (this.teamSize?this.capacity:this.capacity===20?20:8) - this.humans().length;
@@ -70,8 +72,8 @@ export class Room {
       if(this.teamSize){const mates=[...this.players.values()].filter(q=>q.team===p.team),index=mates.indexOf(p);const center=this.map.spawnPoints[p.team===1?0:Math.floor(this.map.spawnPoints.length/2)];let found=false;for(let n=0;n<100;n++){const angle=n*2.39996+index*1.2,r=2+index*2+n*.15;const x=center.x+Math.sin(angle)*r,z=center.z+Math.cos(angle)*r;if(Math.hypot(x,z)<this.map.radius-2&&!this.map.obstacles.some(o=>obstacleSolid(o,this.obstacles)&&obstacleContains(o,x,z,1))&&!mates.slice(0,index).some(q=>Math.hypot(q.x-x,q.z-z)<1.5)){spawn.x=x;spawn.z=z;found=true;break;}}if(!found){spawn.x=center.x;spawn.z=center.z;}}
       Object.assign(p, { x: spawn.x, y: 0, z: spawn.z, vy: 0, previousY: 0, grounded: true, aim: Math.PI, pitch: 0,
         hp: 100, alive: true, kills: 0, deaths: 0, cooldown: 0.6 + this.random(), input: emptyInput(), actions: emptyActions(), lastInput: 0, moving: false,
-        sprinting: false, dashUntil: 0, dashReadyAt: 0, dashVx: 0, dashVz: 0, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, scope: false, skill: null, effect: null, effectRemaining: 0, climb: null, concealed: false, revealedUntil: 0, lastMarkerAt: -Infinity,
-        inventory: this.map.survival ? [] : [{ id: 'water', mag: WEAPONS.water.capacity, reserve: 999 }] });
+        sprinting: false, dashUntil: 0, dashReadyAt: 0, dashVx: 0, dashVz: 0, shots: 0, reload: 0, slot: 0, medkits: 0, healCooldown: 0, ammoBonus: 0, scope: false, skill: null, skillReadyAt: 0, effect: null, effectRemaining: 0, climb: null, concealed: false, revealedUntil: 0, lastMarkerAt: -Infinity,
+        inventory: this.map.urf ? [{ id: 'rocket', mag: WEAPONS.rocket.capacity, reserve: 999 }] : this.map.survival ? [] : [{ id: 'water', mag: WEAPONS.water.capacity, reserve: 999 }] });
     });
     this.pickups.forEach(p => { p.active = true; p.cooldown = 0; });
     this.event('start', { text: 'Trận đấu bắt đầu!' });
@@ -161,7 +163,7 @@ export class Room {
     p.hp = Math.max(0, p.hp - amount);
     if (p.hp <= 0) {
       p.alive = false; p.moving = false;p.respawnAt=this.time+3;p.deaths=(p.deaths||0)+1;
-      const by = this.players.get(attacker); if (by) by.kills++;
+      const by = this.players.get(attacker); if (by) { by.kills++; this.lastKillerId = by.id; }
       this.event('out', { player: p.id, attacker, kills:by?.kills||0, text: `${p.name} đã bay lên trời${by ? ` · ${by.name}` : ''}` });
     }
   }
@@ -169,10 +171,18 @@ export class Room {
     p.decision -= dt; if (p.decision > 0) return;
     p.decision = .18 + this.random() * .13;
     const zone = this.zone(), gun = activeWeapon(p);
-    const targets = [...this.players.values()].filter(q => q.id !== p.id && (!this.teamSize||q.team!==p.team) && q.alive && (!q.concealed || Math.hypot(q.x-p.x,q.z-p.z)<5));
-    targets.sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
+    const wDef = gun ? WEAPONS[gun.id] : null;
+    const effRange = wDef ? wDef.speed * wDef.life : 0; // distance a shot can actually reach
+    const distTo = q => Math.hypot(q.x - p.x, q.z - p.z);
+    const targets = [...this.players.values()].filter(q => q.id !== p.id && (!this.teamSize||q.team!==p.team) && q.alive && (!q.concealed || distTo(q)<5));
+    targets.sort((a, b) => distTo(a) - distTo(b));
     const lineOfSight = q => visible(p.x, p.z, q.x, q.z, this.map, this.obstacles, Math.min(p.y + 1.3, q.y + 1.3));
-    const target = targets.find(q => Math.hypot(q.x - p.x, q.z - p.z) < 45 && lineOfSight(q)) || targets[0];
+    const target = targets.find(q => distTo(q) < 45 && lineOfSight(q)) || targets[0];
+    // The fire target is chosen separately from the movement target: the
+    // nearest enemy this gun can actually hit (line of sight AND inside
+    // effective range). The old code aimed fire at the movement target, so
+    // a bot stuck to an out-of-range enemy never fired at all.
+    const fireTarget = gun ? targets.find(q => distTo(q) <= effRange * .9 && lineOfSight(q)) : null;
     const nearestLoot = this.loot.filter(l => l.active && ((!gun && l.type === 'weapon') || (gun && gun.reserve < 12 && l.type === 'ammo') || (p.hp < 60 && l.type === 'heal') || (!p.skill && l.type === 'skill')))
       .sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
     let gx = 0, gz = 0;
@@ -182,7 +192,10 @@ export class Room {
       if (Math.hypot(gx, gz) <= RULES.interactRange) p.actions.interact = true;
     } else if (target) {
       const dx = target.x - p.x, dz = target.z - p.z, d = Math.hypot(dx, dz) || 1;
-      const approach = d > 15 ? 1 : d < 7 ? -1 : 0; p.drift += .19;
+      // Close in until the current gun can reach: the old fixed 15-unit
+      // hold left short-range guns (candy spread) shooting at air.
+      const holdAt = fireTarget ? 15 : gun ? Math.min(12, effRange * .8) : 15;
+      const approach = d > holdAt ? 1 : d < 7 ? -1 : 0; p.drift += .19;
       gx = dx / d * approach - dz / d * Math.sin(p.drift) * .65;
       gz = dz / d * approach + dx / d * Math.sin(p.drift) * .65;
     }
@@ -197,10 +210,22 @@ export class Room {
         if (!this.map.obstacles.some(o => obstacleSolid(o, this.obstacles) && p.y < o.h - .04 && obstacleContains(o,p.x+x*2.1,p.z+z*2.1,RULES.playerRadius))) { gx = x; gz = z; break; }
       }
     }
-    const d = target ? Math.hypot(target.x - p.x, target.z - p.z) : 100;
-    p.input = { x: gx * .8, z: gz * .8, aim: target ? Math.atan2(target.x - p.x, target.z - p.z) + (this.random() - .5) * .16 : p.aim,
-      pitch: target ? Math.atan2(target.y - p.y, d) : 0, sprint: !gun || d > 28 || Math.hypot(p.x - zone.x, p.z - zone.z) > zone.radius - 10,
-      fire: !!gun && !!target && d < (WEAPONS[gun.id].speed * WEAPONS[gun.id].life * .85) && lineOfSight(target) && this.random() > .18 };
+    // Interact while climbing immediately toggles the climb back off: a
+    // bot next to loot at a ladder base used to climb up/down in a loop
+    // and never shoot. Never interact mid-climb.
+    if (p.climb) p.actions.interact = false;
+    const d = target ? distTo(target) : 100;
+    const aimTarget = fireTarget || target;
+    const dAim = aimTarget ? distTo(aimTarget) : 100;
+    let fire = false;
+    if (fireTarget && this.random() > .08) fire = true;
+    // Suppression fire: an enemy just past effective range still gets shot
+    // at (rounds fall short, but the bot visibly fights) while its mag is
+    // comfortably full.
+    else if (gun && target && d <= effRange * 1.15 && lineOfSight(target) && gun.mag > wDef.capacity * .4 && this.random() < .25) fire = true;
+    p.input = { x: gx * .8, z: gz * .8, aim: aimTarget ? Math.atan2(aimTarget.x - p.x, aimTarget.z - p.z) + (this.random() - .5) * .16 : p.aim,
+      pitch: aimTarget ? Math.atan2(aimTarget.y - p.y, dAim) + (gun?.id === 'candy' ? .06 : 0) : 0, sprint: !gun || d > 28 || Math.hypot(p.x - zone.x, p.z - zone.z) > zone.radius - 10,
+      fire };
     if (p.hp < 65) p.actions.heal = true;
     if(p.skill&&p.effectRemaining<=0&&(p.hp<70||d<30))p.actions.skill=true;
     if (gun && gun.mag < 2) p.actions.reload = true;
@@ -223,6 +248,10 @@ export class Room {
         Object.assign(p,{...spawn,y:0,previousY:0,vy:0,hp:100,alive:true,grounded:true,moving:false,sprinting:false,dashUntil:0,dashReadyAt:0,dashVx:0,dashVz:0,climb:null,effect:null,effectRemaining:0,concealed:false,reload:0,cooldown:1,input:emptyInput(),actions:emptyActions()});
       }
       if (!p.alive) continue;
+      // Random skill on entry (Ken 2026-11-09): every participant - human
+      // or bot - holds a random skill; using it starts a 30 s cooldown,
+      // then a fresh random skill is granted. Dying does not reset it.
+      if (!p.skill && !p.effect && this.time >= (p.skillReadyAt || 0)) p.skill = SKILL_IDS[Math.floor(this.random() * SKILL_IDS.length)];
       if (p.bot) this.botInput(p, dt);
       else if (!p.connected || this.time - p.lastInput > .5) { p.input = emptyInput(); p.actions = emptyActions(); }
       const input = p.input, actions = p.actions;
@@ -265,7 +294,7 @@ export class Room {
         this.phase='finished';this.bullets=[];this.event('finish',{text:this.winner?`${this.winner.name} chiến thắng!`:'Hai đội hòa nhau!'});
       }
     }else if ((!this.respawn&&alive.length <= 1) || this.time >= this.duration) {
-      const winner = (this.respawn?[...this.players.values()]:alive).sort((a, b) => (this.respawn?b.kills-a.kills||(a.deaths||0)-(b.deaths||0):0)||b.hp - a.hp || b.kills - a.kills || a.id.localeCompare(b.id))[0];
+      const winner = (this.respawn?[...this.players.values()]:alive.length?alive:[...this.players.values()].filter(p => p.id === this.lastKillerId)).sort((a, b) => (this.respawn?b.kills-a.kills||(a.deaths||0)-(b.deaths||0):0)||b.hp - a.hp || b.kills - a.kills || a.id.localeCompare(b.id))[0]; // alive empty only on a same-tick double KO: credit the last killer
       this.phase = 'finished'; this.winner = winner ? { id: winner.id, name: winner.name, bot: winner.bot } : null;
       this.bullets = []; this.event('finish', { text: winner ? `${winner.name} chiến thắng!` : 'Hòa cả làng!' });
     }
@@ -273,8 +302,8 @@ export class Room {
   snapshot() {
     return { type: 'state', code: this.code, phase: this.phase, mode: this.mode, capacity:this.capacity, teamSize:this.teamSize, respawn:this.respawn, hostId: this.hostId, round: this.round,
       mapId: this.map.id, duration: this.duration, time: Math.round(this.time * 100) / 100, radius: this.radius(), zone: this.zone(), winner: this.winner, markers: this.markers.map(m => ({ ...m })),
-      players: [...this.players.values()].map(({ id, name, bot, team, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, deaths, respawnAt, ready, connected, moving, grounded, sprinting, dashUntil, dashReadyAt, inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining, concealed, climb }) =>
-        ({ id, name, bot, team, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, deaths: deaths||0, respawnIn: alive?0:Math.max(0, Math.round(((respawnAt||0) - this.time) * 10) / 10), ready, connected, moving, grounded, sprinting, dashCooldownLeft: Math.max(0, Math.round(((dashReadyAt||0) - this.time) * 10) / 10), dashing: this.time < (dashUntil||0), inventory, slot, reload, medkits, shots, scope, skill, effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
+      players: [...this.players.values()].map(({ id, name, bot, team, outfit, hat, x, y, z, aim, pitch, hp, alive, kills, deaths, respawnAt, ready, connected, moving, grounded, sprinting, dashUntil, dashReadyAt, inventory, slot, reload, medkits, shots, scope, skill, skillReadyAt, effect, effectRemaining, concealed, climb }) =>
+        ({ id, name, bot, team, outfit, hat, x: +x.toFixed(3), y: +(y || 0).toFixed(3), z: +z.toFixed(3), aim, pitch, hp: Math.ceil(hp), alive, kills, deaths: deaths||0, respawnIn: alive?0:Math.max(0, Math.round(((respawnAt||0) - this.time) * 10) / 10), ready, connected, moving, grounded, sprinting, dashCooldownLeft: Math.max(0, Math.round(((dashReadyAt||0) - this.time) * 10) / 10), dashing: this.time < (dashUntil||0), inventory, slot, reload, medkits, shots, scope, skill, skillCooldownLeft: Math.max(0, Math.round(((skillReadyAt||0) - this.time) * 10) / 10), effect, effectRemaining: +(effectRemaining||0).toFixed(2), concealed, climbing:!!climb })),
       bombs: this.bombs.map(({ id, x, z, fall, total }) => ({ id, x: +x.toFixed(2), z: +z.toFixed(2), fall: +fall.toFixed(2), total })),
       bullets: this.bullets.map(({ id, owner, weapon, x, y, z, vx, vy, vz, speed }) => ({ id, owner, weapon, x, y, z, vx, vy, vz, speed })),
       loot: this.loot.filter(l => l.active), obstacles: [...this.obstacles.values()].filter(s => s.open || s.destroyed || s.hp < s.maxHp),

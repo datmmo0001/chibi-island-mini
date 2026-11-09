@@ -23,7 +23,7 @@ let selectedMap = safeStore.get('chibi-map', 'frontier'), activeMap = getMap(sel
 $('map-select').value = selectedMap;
 function selectMap() {
   selectedMap = getMap($('map-select').value).id; activeMap = getMap(selectedMap); safeStore.set('chibi-map', selectedMap); world.changeMap(selectedMap);
-  $('match-duration-tag').innerHTML = activeMap.survival ? '<b>10′</b> sinh tồn' : '<b>3′</b> đấu trường';
+  $('match-duration-tag').innerHTML = activeMap.survival ? '<b>10′</b> sinh tồn' : `<b>${Math.round(activeMap.duration/60)}′</b> đấu trường`;
   $('room-size').querySelector('[value="20"]').disabled=selectedMap!=='frontier';if(selectedMap!=='frontier'&&$('room-size').value==='20')$('room-size').value='3';
   $('solo').firstChild.textContent=$('room-size').value.startsWith('team')?'Vào tổ đội ':'Chơi ngay ';
   $('hero-map-name').textContent = activeMap.name.toLocaleUpperCase('vi');
@@ -266,7 +266,7 @@ function renderInventory(me, data) {
   $('weapon-icon').dataset.weapon = definition?.id || 'none';
   document.querySelector('[data-hud=weapon]').title = definition?.name || 'Chưa có súng';
   $('ammo-mag').textContent = gun ? (activeMap.survival ? gun.mag : '∞') : '—';
-  $('ammo-reserve').textContent = gun ? (activeMap.survival ? `/ ${gun.reserve}` : 'Nước không giới hạn') : 'Nhặt súng';
+  $('ammo-reserve').textContent = gun ? (activeMap.survival ? `/ ${gun.reserve}` : gun.id==='rocket' ? 'Tên lửa không giới hạn' : 'Nước không giới hạn') : 'Nhặt súng';
   $('reload-status').textContent = me.reload > 0 ? `Đang nạp · ${me.reload.toFixed(1)} s` : gun && gun.mag === 0 ? 'Cần nạp đạn' : '';
   $('reload-progress').hidden = !(me.reload > 0 && definition); const reloadPercent = definition ? Math.round(Math.max(0, Math.min(1, 1 - me.reload / definition.reload)) * 100) : 0;
   $('reload-progress').setAttribute('aria-valuenow', reloadPercent); $('reload-progress').firstElementChild.style.width = `${reloadPercent}%`;
@@ -287,7 +287,7 @@ function toggleScope(){const me=state?.players.find(p=>p.id===identity);if(state
 function renderAbilities(me){
   const active=SKILLS[me.effect],held=SKILLS[me.skill],skill=active||held,button=$('touch-skill');
   button.disabled=!me.alive||!held||!!active||me.climbing;button.classList.toggle('active',!!active);button.style.setProperty('--skill-color',skill?.color||'#d4bcff');
-  $('skill-icon').textContent=skill?.icon||'✦';$('skill-label').textContent=active?`${me.effectRemaining.toFixed(1)}s`:held?({dash:'LƯỚT',flight:'BAY',regen:'HỒI',power:'×2 DAME',rocket:'TÊN LỬA'}[me.skill]):'MỞ HÒM';
+  $('skill-icon').textContent=skill?.icon||'✦';$('skill-label').textContent=active?`${me.effectRemaining.toFixed(1)}s`:held?({dash:'LƯỚT',flight:'BAY',regen:'HỒI',power:'×2 DAME',rocket:'TÊN LỬA',shrink:'THU NHỎ',grow:'PHÓNG TO'}[me.skill]):(me.skillCooldownLeft||0)>0?`HỒI ${Math.ceil(me.skillCooldownLeft)}s`:'MỞ HÒM';
   button.setAttribute('aria-label',skill?`${active?'Đang dùng':'Dùng kỹ năng'} ${skill.name}`:'Kỹ năng · Mở hòm để nhặt');button.title=skill?.description||'Mở hòm để nhặt kỹ năng';
   $('touch-scope').disabled=!me.alive||!me.scope||!me.inventory?.length;$('scope-label').textContent=me.scope?'NGẮM 3×':'TÌM KÍNH';
   if($('touch-scope').disabled)setScoped(false);

@@ -1,4 +1,9 @@
-import { RULES, WEAPONS, SKILLS, cylinderHit, obstacleSolid, obstacleHit } from '../shared.js';
+import { RULES, WEAPONS, SKILLS, ROCKET_BLAST, cylinderHit, obstacleSolid, obstacleHit } from '../shared.js';
+
+// Current body size of a player: the shrink/grow skills scale the bullet
+// hit cylinder (and the client avatar) - but NOT obstacle collision in
+// moveActor, so a shrunk player still cannot slip through narrow gaps.
+export const bodyScaleOf = p => p.effect === 'shrink' && p.effectRemaining > 0 ? .3 : p.effect === 'grow' && p.effectRemaining > 0 ? 1.5 : 1;
 
 export const activeWeapon = p => p.inventory?.[p.slot || 0] || null;
 export function resetWorld(room) {
@@ -90,21 +95,50 @@ export function shoot(room, p) {
   if (gun.mag <= 0) { reloadWeapon(p); return; }
   const w = WEAPONS[gun.id]; if (room.map.survival) gun.mag--;
   p.cooldown = w.interval * (p.bot ? 1.35 : 1); p.shots++; p.revealedUntil=room.time+1.5;
+  if (gun.id === 'rocket') {
+    // URF rocket gun: a single straight heavy shell with an area blast
+    // (advanceBullets resolves the explosion). Damage is the weapon's 100,
+    // with the grow multiplier applied like any other gun.
+    const pitch = p.pitch || 0;
+    const vx = Math.sin(p.aim) * Math.cos(pitch), vz = Math.cos(p.aim) * Math.cos(pitch), vy = Math.sin(pitch);
+    room.bullets.push({ id: ++room.bulletId, owner: p.id, weapon: 'rocket', damage: w.damage * (p.effect === 'grow' && p.effectRemaining > 0 ? 1.5 : 1), speed: w.speed,
+      x: p.x + vx * .86 - Math.cos(p.aim) * .42, y: (p.y + 1.25) + vy * .86, z: p.z + vz * .86 + Math.sin(p.aim) * .42, vx, vy, vz,
+      life: (room.map.radius * 2 + 40) / w.speed, blast: ROCKET_BLAST, hitPlayers: new Set() });
+    return;
+  }
   const muzzleY = p.y + 1.25;
   for (let i = 0; i < w.pellets; i++) {
     const angle = p.aim + (room.random() - .5) * w.spread * (p.input?.aiming?.5:2), pitch = (p.pitch || 0) + (room.random() - .5) * w.spread * (p.input?.aiming?.25:1);
     const vx = Math.sin(angle) * Math.cos(pitch), vz = Math.cos(angle) * Math.cos(pitch), vy = Math.sin(pitch);
-    room.bullets.push({ id: ++room.bulletId, owner: p.id, weapon: gun.id, damage: w.damage * (p.effect==='power'&&p.effectRemaining>0?2:1), speed: w.speed,
+    room.bullets.push({ id: ++room.bulletId, owner: p.id, weapon: gun.id, damage: w.damage * (p.effect==='power'&&p.effectRemaining>0?2:1) * (p.effect==='grow'&&p.effectRemaining>0?1.5:1), speed: w.speed,
       x: p.x + vx * .86 - Math.cos(p.aim) * .42, y: muzzleY + vy * .86, z: p.z + vz * .86 + Math.sin(p.aim) * .42, vx, vy, vz, life: w.life });
   }
 }
 export function advanceBullets(room, dt) {
+  const exploded = [];
   room.bullets = room.bullets.filter(b => {
     const x = b.x + b.vx * b.speed * dt, y = b.y + b.vy * b.speed * dt, z = b.z + b.vz * b.speed * dt;
-    if(b.piercing){
-      for(const p of room.players.values())if(p.alive&&p.id!==b.owner&&(!room.teamSize||p.team!==room.players.get(b.owner)?.team)&&!b.hitPlayers.has(p.id)&&cylinderHit(b.x,b.y,b.z,x,y,z,p.x,p.z,RULES.playerRadius+.3,p.y,p.y+2.8)!==null){
-        b.hitPlayers.add(p.id);room.damage(p,b.damage,b.owner);room.event('hit',{attacker:b.owner,player:p.id});
+    if (b.blast) {
+      // Rocket: flies straight until it touches an obstacle, an enemy, the
+      // ground, the map edge or the end of its life - then it explodes at
+      // the contact point (blast resolution runs below the filter).
+      let tHit = null;
+      for (const o of room.map.obstacles) if (obstacleSolid(o, room.obstacles)) {
+        const t = obstacleHit(b.x, b.y, b.z, x, y, z, o, .1);
+        if (t !== null && (tHit === null || t < tHit)) tHit = t;
       }
+      for (const p of room.players.values()) if (p.alive && p.id !== b.owner && (!room.teamSize || p.team !== room.players.get(b.owner)?.team)) {
+        const s = bodyScaleOf(p);
+        const t = cylinderHit(b.x, b.y, b.z, x, y, z, p.x, p.z, Math.max(.22, (RULES.playerRadius + .1) * s), p.y, p.y + 2.6 * s);
+        if (t !== null && (tHit === null || t < tHit)) tHit = t;
+      }
+      if (tHit !== null) { b.x += (x - b.x) * tHit; b.y += (y - b.y) * tHit; b.z += (z - b.z) * tHit; exploded.push(b); return false; }
+      b.x = x; b.y = y; b.z = z; b.life -= dt;
+      if (b.life <= 0 || (y <= .05 && b.vy < 0) || Math.hypot(x, z) > room.map.radius + 15) { exploded.push(b); return false; }
+      return true;
+    }
+    if(b.piercing){
+      for(const p of room.players.values())if(p.alive&&p.id!==b.owner&&(!room.teamSize||p.team!==room.players.get(b.owner)?.team)&&!b.hitPlayers.has(p.id)){const s=bodyScaleOf(p);if(cylinderHit(b.x,b.y,b.z,x,y,z,p.x,p.z,Math.max(.22,(RULES.playerRadius+.3)*s),p.y,p.y+2.8*s)!==null){b.hitPlayers.add(p.id);room.damage(p,b.damage,b.owner);room.event('hit',{attacker:b.owner,player:p.id});}}
       b.x=x;b.y=y;b.z=z;b.life-=dt;
       return b.life>0&&Math.hypot(x,z)<room.map.radius+15;
     }
@@ -114,7 +148,8 @@ export function advanceBullets(room, dt) {
       if (t !== null && t < first) { first = t; hit = { obstacle: o }; }
     }
     for (const p of room.players.values()) if (p.alive && p.id !== b.owner && (!room.teamSize||p.team!==room.players.get(b.owner)?.team)) {
-      const t = cylinderHit(b.x, b.y, b.z, x, y, z, p.x, p.z, RULES.playerRadius + .1, p.y + .15, p.y + 2.6);
+      const s = bodyScaleOf(p);
+      const t = cylinderHit(b.x, b.y, b.z, x, y, z, p.x, p.z, Math.max(.22, (RULES.playerRadius + .1) * s), p.y + .15, p.y + 2.6 * s);
       if (t !== null && t < first) { first = t; hit = { player: p }; }
     }
     if (hit) {
@@ -128,4 +163,17 @@ export function advanceBullets(room, dt) {
     b.x = x; b.y = y; b.z = z; b.life -= dt;
     return b.life > 0 && y >= .02 && Math.hypot(x, z) < room.map.radius + 2;
   });
+  // Blast resolution runs after the sweep so an explosion never mutates
+  // the player set while other bullets are still being tested. The
+  // shooter is never hurt by their own rocket (sky bombs are
+  // environmental and still hit everyone); teammates are protected
+  // like with any other weapon.
+  for (const b of exploded) {
+    room.event('explosion', { x: Math.round(b.x * 100) / 100, z: Math.round(b.z * 100) / 100, radius: b.blast });
+    for (const p of room.players.values()) {
+      if (!p.alive || p.id === b.owner || (room.teamSize && p.team === room.players.get(b.owner)?.team)) continue;
+      if (Math.hypot(p.x - b.x, (p.y + 1.3) - b.y, p.z - b.z) <= b.blast) { room.damage(p, b.damage, b.owner); room.event('hit', { attacker: b.owner, player: p.id }); }
+    }
+  }
 }
+

@@ -20,7 +20,7 @@
 @media(max-height:420px){#lobby.overlay-panel{padding:12px 16px;gap:7px}#lobby h1{font-size:19px}#lobby .room-code-card{min-height:40px;padding:5px 10px}#lobby .room-code-card strong{font-size:20px}#lobby .icon-button{width:28px;height:28px;font-size:16px}#lobby-mode-line{font-size:10px}#lobby .player-slot{padding:4px}#lobby .player-avatar{height:20px;font-size:16px}#lobby .lobby-actions button{min-height:33px;height:33px}#lobby .lobby-bottom{min-height:18px}.mouse-gate-card{padding:14px}}
 
 /* Preparation stays inside the available landscape viewport, including browser chrome. */
-body:not(.playing){height:100dvh;overflow:hidden}
+body:not(.playing){height:100dvh;height:100svh;overflow:hidden}
 body:not(.playing):not(.lobby-mode) #header{min-height:60px;padding:10px 22px}
 #home{position:fixed;inset:60px 16px 14px!important;overflow:hidden}
 #home .welcome{position:absolute;right:0;top:0;width:min(460px,54vw);height:100%;margin:0;display:grid;align-items:center}
@@ -113,7 +113,7 @@ body:not(.playing) #header{height:auto;min-height:0;padding-top:calc(10px + env(
 #home{flex-direction:column;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 #home .welcome{flex:0 0 auto;width:100%;height:auto}
 #home .play-card{height:auto;max-height:none;overflow:visible}
-.chat-card{flex:0 0 auto;width:100%;min-width:0;height:min(46dvh,430px)}
+.chat-card{flex:0 0 auto;width:100%;min-width:0;height:min(46svh,430px)}
 }
 @media(max-width:480px){
 #home .play-card{grid-template-columns:1fr;gap:6px 0;padding:14px}
@@ -126,7 +126,7 @@ body:not(.playing) #header{height:auto;min-height:0;padding-top:calc(10px + env(
 #home label[for="player-name"]{grid-row:auto}#home #player-name{grid-row:auto}
 #home button[data-dialog="appearance-dialog"]{grid-row:auto}
 #home .home-actions{grid-row:auto}
-.chat-card{height:min(52dvh,480px);padding:12px}
+.chat-card{height:min(52svh,480px);padding:12px}
 .chat-input-row button{min-height:38px;padding:0 14px}
 #lobby #player-slots{grid-template-columns:repeat(3,minmax(0,1fr))}
 #appearance-dialog .outfit-list{grid-template-columns:repeat(3,minmax(0,1fr))}
