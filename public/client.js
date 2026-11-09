@@ -358,6 +358,7 @@ menus=createMenus({world,store:safeStore,resetInput:()=>{mouseLock.release();res
 playGuard=createPlayGuard({mouseLock,resetInput,getPhase:()=>state?.phase,isAlive:()=>!!state?.players.find(p=>p.id===identity)?.alive,menusOpen:()=>!!menus?.isOpen()});
 createFullscreen({button:$('fullscreen-toggle'),buttons:[$('home-fullscreen'),$('lobby-fullscreen'),$('rotate-fullscreen')],notify:toast,resetInput});
 world.onLocalShot=()=>{clearTimeout(firingTimer);$('crosshair').classList.add('firing');firingTimer=setTimeout(()=>$('crosshair').classList.remove('firing'),90);tone(740+Math.random()*80,.07,.025);};
+world.onLocalSplashHit=()=>gameAudio?.splash();
 // Login gate (Free Fire style): name + one enter button, then the lobby.
 function enterIsland(){const n=$('login-name').value.trim();if(!n){toast('Đặt tên trước khi lên đảo nhé.');$('login-name').focus();return;}$('player-name').value=n;safeStore.set('chibi-name',n);initAudio();const s=$('login-screen');s.classList.add('login-done');setTimeout(()=>{s.hidden=true;},380);}
 $('login-enter').onclick=enterIsland;
