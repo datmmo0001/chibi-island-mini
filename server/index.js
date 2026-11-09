@@ -7,7 +7,7 @@ import { Room, makeCode, makeId } from './game.js';
 import { RULES, GAME_VERSION } from '../shared.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const types = { '.wav':'audio/wav', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const types = { '.wav':'audio/wav', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.glb': 'model/gltf-binary', '.vrm': 'model/gltf-binary' };
 export function createGameServer({ maxRooms = 50 } = {}) {
   const rooms = new Map(), sessions = new Map();
   const server = http.createServer(async (req, res) => {

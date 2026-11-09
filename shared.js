@@ -20,7 +20,10 @@ export const OUTFITS = [
   {id:'akari',name:'Akari · Hoa Anh Đào',anime:true,color:'#f4a8c2',light:'#fff1eb',accent:'#a63665',hair:'#b44b76',eye:'#8742b1'},
   {id:'ren',name:'Ren · Ninja Gió',anime:true,color:'#354d83',light:'#bfe9ef',accent:'#e65d62',hair:'#23344c',eye:'#3598a6'},
   {id:'aoi',name:'Aoi · Pháp Sư Sao',anime:true,color:'#7772c8',light:'#e6e8ff',accent:'#ecc873',hair:'#79baca',eye:'#3d76bf'},
-  {id:'haru',name:'Haru · Lữ Khách Nắng',anime:true,color:'#e6ad51',light:'#fff5d7',accent:'#528275',hair:'#705444',eye:'#71954a'}
+  {id:'haru',name:'Haru · Lữ Khách Nắng',anime:true,color:'#e6ad51',light:'#fff5d7',accent:'#528275',hair:'#705444',eye:'#71954a'},
+  {id:'miku',name:'Miku · Ca Sĩ Xanh Ngọc',anime:true,color:'#46525e',light:'#eef7f7',accent:'#14b8a6',hair:'#2ec4b6',eye:'#0e9fd8'},
+  {id:'juanita',name:'Juanita · Chibi CC0',model:'juanita',color:'#8fce5a',light:'#fff6ec',accent:'#ef7fa8',hair:'#f2a0c4',eye:'#a03d63'},
+  {id:'anna',name:'Anna · Chibi CC0',model:'anna',color:'#e8a2b8',light:'#fff2f5',accent:'#8a5a72',hair:'#e8b4c4',eye:'#7a4a5e'}
 ];
 export const HATS = ['ears', 'cap', 'leaf'];
 export const MAP = Object.freeze({

@@ -1,4 +1,11 @@
 import { resetRespawnVisual } from './actor-life.js';
+import { modelAvatar } from './model-avatar.js';
+import { createGunSlot, setGunWeapon, attachModel, attachLootBlaster, hashStr } from './asset-models.js';
+// Kenney CC0 models replace the blocky look for 90% of trees/bushes (stable
+// per-obstacle hash); Ken asked to keep 10% in the original style because
+// the original bushes are the ones players hide in. Rocks always upgrade.
+const kenneyFor = o => hashStr(String(o.id)) % 10 !== 0;
+const pickByHash = (o, arr) => arr[hashStr(String(o.id)) % arr.length];
 import * as THREE from 'three';
 import { MAPS, OUTFITS, RULES, WEAPONS, SKILLS, getMap, cylinderHit, obstacleSolid, obstacleHit, obstacleContains, clamp } from '/shared.js';
 
@@ -13,7 +20,9 @@ const box = (w, h, d, color, p, x, y, z) => mesh(new THREE.BoxGeometry(w, h, d),
 const cylinder = (rt, rb, h, color, p, x, y, z, detail = 20) => mesh(new THREE.CylinderGeometry(rt, rb, h, detail), color, p, x, y, z);
 
 export function avatar(outfitId = 'bear', hat = 'ears') {
-  const outfit = OUTFITS.find(o => o.id === outfitId) || OUTFITS[0], g = new THREE.Group();
+  const outfit = OUTFITS.find(o => o.id === outfitId) || OUTFITS[0];
+  if (outfit.model) return modelAvatar(outfit, hat);
+  const g = new THREE.Group();
   const body = sphere(0.49, outfit.color, g, 0, 0.94, 0); body.scale.set(1, 1.16, 0.8);
   const belly = sphere(0.35, outfit.light, g, 0, 0.93, 0.31); belly.scale.set(1, 1, 0.26);
   const head = sphere(0.73, outfit.color, g, 0, 1.94, 0); head.scale.set(1, .93, .93);
@@ -67,7 +76,7 @@ export function avatar(outfitId = 'bear', hat = 'ears') {
       const brim=cylinder(.91,.91,.09,outfit.accent,details,0,2.5,0,18);
       const hatTop=mesh(new THREE.ConeGeometry(.61,1.05,14),outfit.color,details,.08,2.99,0);hatTop.rotation.z=-.15;
       const star=mesh(new THREE.OctahedronGeometry(.14), '#ffe8a3',details,.1,2.82,.49);star.scale.z=.3;
-    }else{
+    }else if(outfit.id==='haru'){
       for(const sign of [-1,1]){const tuft=sphere(.25,outfit.hair,details,sign*.54,2.42,-.08);tuft.scale.set(1.35,.55,.8);tuft.rotation.z=sign*.3;}
       const jacket=box(.14,.53,.12,outfit.accent,details,-.24,1.02,.4);
       box(.09,.59,.12,outfit.light,details,.21,1.02,.4);
@@ -75,6 +84,19 @@ export function avatar(outfitId = 'bear', hat = 'ears') {
       const glass=cylinder(.12,.12,.07,outfit.accent,details,.21,2.47,.57,12);glass.rotation.x=Math.PI/2;
       box(.22,.04,.05,'#e7d9a6',details,0,2.47,.59);
       pack.material=mat('#679f91');
+    }else{
+      // Miku (original): long turquoise twin tails, ribbon bows, headset with mic, tie and pleated skirt.
+      for(const sign of [-1,1]){
+        const tail=sphere(.34,outfit.hair,details,sign*.8,1.7,-.1,14);tail.scale.set(.62,2.15,.68);tail.rotation.z=sign*-.12;
+        const tip=sphere(.2,outfit.hair,details,sign*.95,.58,-.1,10);tip.scale.set(.85,1.15,.85);
+        const bowA=sphere(.16,outfit.accent,details,sign*.64,2.52,.2,10);bowA.scale.set(1.3,.55,.6);bowA.rotation.z=sign*.5;
+        const bowB=sphere(.16,outfit.accent,details,sign*.88,2.56,.2,10);bowB.scale.set(1.3,.55,.6);bowB.rotation.z=sign*-.5;
+        const cup=box(.13,.3,.34,'#2b3540',details,sign*.71,2.0,.05);
+        sphere(.05,'#9ff5ee',details,sign*.74,2.0,.24,8);
+      }
+      const mic=box(.05,.05,.46,'#2b3540',details,.3,1.68,.6);mic.rotation.y=.45;
+      const tie=box(.17,.5,.06,outfit.accent,details,0,1.06,.47);tie.rotation.x=.06;
+      const skirt=cylinder(.4,.66,.34,outfit.color,details,0,.68,0,14);
     }
     if(hat==='cap'){const clip=sphere(.1,'#ffe8a3',details,.58,2.36,.3);clip.scale.z=.3;}
     if(hat==='leaf'){const pin=sphere(.17,'#81bd86',details,-.59,2.3,.34);pin.scale.set(.5,1,.25);pin.rotation.z=.5;}
@@ -104,6 +126,7 @@ export function avatar(outfitId = 'bear', hat = 'ears') {
   const scope=new THREE.Group();gun.add(scope);scope.visible=false;
   const lens=cylinder(.11,.11,.45,'#32484f',scope,0,.25,.17,10);lens.rotation.x=Math.PI/2;
   box(.1,.12,.14,'#526b69',scope,0,.11,.12);
+  gun.userData.placeholderMeshes=gun.children.filter(o=>o.isMesh);createGunSlot(gun);
   const aura=new THREE.Group();g.add(aura);aura.visible=false;
   const halo=new THREE.Mesh(new THREE.TorusGeometry(.85,.065,6,24),new THREE.MeshBasicMaterial({color:'#89ffb4',transparent:true,opacity:.8,depthWrite:false,toneMapped:false}));halo.rotation.x=-Math.PI/2;halo.position.y=.2;aura.add(halo);
   const wings=new THREE.Group();aura.add(wings);for(const sign of [-1,1]){const wing=sphere(.65,'#dac8ff',wings,sign*.9,1.5,-.15,7);wing.scale.set(1.3,.18,.7);wing.rotation.z=sign*.5;}
@@ -161,6 +184,7 @@ export class IslandScene {
       for(let i=0;i<2600;i++){const a=i*2.399963,r=Math.sqrt((i*.618034)%1)*(R-3);dummy.position.set(Math.sin(a)*r,.2,Math.cos(a)*r);dummy.rotation.y=a;dummy.scale.setScalar(.65+(i%7)/10);dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);}grass.receiveShadow=true;grass.castShadow=false;p.add(grass);
     }
     for(const o of this.map.obstacles)this.makeObstacle(o);
+    this.makeDecorations();
     this.zone=mesh(new THREE.TorusGeometry(1,.018,5,160),'#63dcff',p,0,.12,0);this.zone.rotation.x=-Math.PI/2;this.zone.castShadow=false;
     this.zone.material=new THREE.MeshBasicMaterial({color:'#70e5ff',toneMapped:false});
     this.zoneWall=mesh(new THREE.CylinderGeometry(1,1,1,128,1,true),'#69d3ef',p,0,5,0);
@@ -168,6 +192,22 @@ export class IslandScene {
     this.zone.scale.setScalar(R-3);this.zoneWall.scale.set(R-3,10,R-3);
     for(const [id,point]of this.map.pickups.entries()){const obj=this.makeLoot({type:'heal'});obj.position.set(point.x,.5,point.z);p.add(obj);this.pickupMeshes.set(id,obj);}
     this.obstacleStates=new Map();
+  }
+  makeDecorations(){
+    // Deterministic Kenney scatter (grass / flowers / mushrooms): pure
+    // decoration, no collision, kept clear of obstacles and spawn points.
+    const R=this.map.radius;let seed=hashStr(this.map.id)+7;const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+    const files=['grass_large.glb','grass.glb','flower_redA.glb','flower_yellowA.glb','flower_purpleA.glb','mushroom_red.glb','mushroom_tan.glb'];
+    const count=this.map.id==='candy'?46:150;let placed=0,tries=0;
+    while(placed<count&&tries<count*12){
+      tries++;const a=rnd()*Math.PI*2,r=Math.sqrt(rnd())*(R-4),x=Math.sin(a)*r,z=Math.cos(a)*r;
+      if(this.map.obstacles.some(o=>Math.hypot(x-o.x,z-o.z)<(o.r||1)+1.1))continue;
+      if((this.map.spawnPoints||[]).some(p=>Math.hypot(x-p.x,z-p.z)<4))continue;
+      const file=files[Math.floor(rnd()*files.length)],s=1.5+rnd()*1.3;
+      const holder=new THREE.Group();holder.position.set(x,0,z);this.mapRoot.add(holder);
+      attachModel(holder,'/models/'+file,{scale:[s,s,s],rotY:rnd()*6.28});
+      placed++;
+    }
   }
   makeSign(region){
     const group=new THREE.Group();group.position.set(region.x+10,0,region.z-7);this.mapRoot.add(group);
@@ -203,13 +243,30 @@ export class IslandScene {
       for(const [x,z,size,tone]of [[0,0,1,'#39752e'],[-.9,.3,.78,'#4c922e'],[.85,-.3,.82,'#64a83e']]){
         const leaf=sphere(o.r*size,tone,g,x,o.h*.48,z,8);leaf.scale.y=o.h*.56/(o.r*size);leaf.material=leaf.material.clone();leaves.push(leaf);
       }g.userData.leaves=leaves;
+      if(kenneyFor(o)){
+        // Kenney bush keeps the hide mechanic: its meshes (with per-instance
+        // cloned materials) become g.userData.leaves so frame() can fade
+        // them while a player hides inside, exactly like the blocky leaves.
+        // Three smaller tufts mirror the original 3-sphere clump; a single
+        // tuft scaled to the whole bush looked like crumpled paper.
+        const file=pickByHash(o,['plant_bush.glb','plant_bushLarge.glb','plant_bushDetailed.glb']),modelLeaves=[];
+        [[0,0,1],[-.9,.3,.78],[.85,-.3,.82]].forEach(([tx,tz,ts],ti)=>{
+          const s=2*o.r*ts*.92/.4;
+          attachModel(g,'/models/'+file,{scale:[s,o.h*.95/.245,s],pos:[tx,0,tz],rotY:(hashStr(String(o.id)+ti)%628)/100,onLoaded:m=>{if(ti===0)for(const leaf of leaves)leaf.visible=false;m.traverse(x=>{if(x.isMesh){x.material=x.material.clone();modelLeaves.push(x);}});if(modelLeaves.length)g.userData.leaves=modelLeaves;}});
+        });
+      }
     }else if(o.kind==='ladder'){
       for(const x of [-.48,.48])box(.1,o.h+.6,.14,'#e8c889',g,x,(o.h+.6)/2,0);
       for(let y=.3;y<o.h+.4;y+=.4)box(1,.08,.18,'#ead6a3',g,0,y,0);
     }else if(o.kind==='tree'){
-      cylinder(o.r*.52,o.r*.64,o.h*.68,'#94704b',g,0,o.h*.34,0,8);
+      const trunk=cylinder(o.r*.52,o.r*.64,o.h*.68,'#94704b',g,0,o.h*.34,0,8);
       const crown=sphere(o.r*2.5,'#3f843e',g,0,o.h*.77,0,10);crown.scale.y=1.1;
-      sphere(o.r*1.9,'#69a34c',g,-o.r*.6,o.h*.98,.2,9);
+      const crown2=sphere(o.r*1.9,'#69a34c',g,-o.r*.6,o.h*.98,.2,9);
+      if(kenneyFor(o)){
+        const file=pickByHash(o,['tree_oak.glb','tree_default.glb','tree_pineRoundC.glb','tree_palm.glb']);
+        const fileH={'tree_oak.glb':1.226,'tree_default.glb':1.708,'tree_pineRoundC.glb':1.253,'tree_palm.glb':1.515}[file];
+        const s=o.h*1.12/fileH;attachModel(g,'/models/'+file,{scale:[s,s,s],rotY:(hashStr(String(o.id))%628)/100,onLoaded:()=>{trunk.visible=false;crown.visible=false;crown2.visible=false;}});
+      }
     }else if(o.kind==='chest'){
       box(o.r*1.5,o.h*.62,o.r*1.28,'#a46c31',g,0,o.h*.31,0);
       for(const x of [-o.r*.52,o.r*.52])box(.11,o.h*.62,o.r*1.32,'#e8bd50',g,x,o.h*.31,0);
@@ -235,6 +292,11 @@ export class IslandScene {
     }else{
       const rock=sphere(o.r,'#a4af99',g,0,o.h*.46,0,7);rock.scale.y=o.h/(o.r*1.8);rock.rotation.y=o.x;
       const moss=sphere(o.r*.7,'#719549',g,-.1,o.h*.85,0,7);moss.scale.y=.2;
+      if(o.kind==='rock'){
+        const file=pickByHash(o,['rock_largeA.glb','rock_largeB.glb','rock_largeC.glb']);
+        const dims={'rock_largeA.glb':[.784,.26,1.016],'rock_largeB.glb':[.766,.43,1.016],'rock_largeC.glb':[1.064,.321,1.016]}[file];
+        attachModel(g,'/models/'+file,{scale:[2*o.r/dims[0],o.h/dims[1],2*o.r/dims[2]],rotY:(hashStr(String(o.id))%628)/100,onLoaded:()=>{rock.visible=false;moss.visible=false;}});
+      }
     }
   }
   makeLoot(item){
@@ -249,7 +311,7 @@ export class IslandScene {
       const lens=cylinder(.15,.15,.035,'#8ce6ff',group,0,.5,.37,10);lens.rotation.x=Math.PI/2;
       box(.2,.17,.3,'#738d8f',group,0,.29,0);
     }else if(item.type==='weapon'){
-      box(.26,.24,.85,color,group,0,.4,0);box(.14,.25,.15,'#3f6367',group,0,.23,-.2);cylinder(.13,.13,.25,'#e7eacb',group,0,.65,-.14,8);
+      const ph=[box(.26,.24,.85,color,group,0,.4,0),box(.14,.25,.15,'#3f6367',group,0,.23,-.2),cylinder(.13,.13,.25,'#e7eacb',group,0,.65,-.14,8)];if(item.weapon)attachLootBlaster(group,item.weapon,ph);
     }else if(item.type==='ammo'){
       box(.55,.38,.45,'#d9b351',group,0,.25,0);box(.3,.09,.47,'#fff4a5',group,0,.35,0);
     }else{
@@ -299,7 +361,7 @@ export class IslandScene {
       a.userData.shots=p.shots||0;a.userData.hp=p.hp;a.userData.target=p;
       const w=p.inventory?.[p.slot||0];a.userData.gun.visible=!!w;a.userData.scope.visible=!!p.scope;
       a.userData.aura.visible=!!p.effect||!!p.team;a.userData.wings.visible=p.effect==='flight';a.userData.halo.material.color.set(SKILLS[p.effect]?.color||(p.team===1?'#58caff':p.team===2?'#ff9c59':'#89ffb4'));
-      if(w){a.userData.gun.scale.set(w.id==='candy'?1.3:1,1,w.id==='bubble'?1.4:1);a.userData.gun.children[0].material=mat(WEAPONS[w.id].color);}
+      if(w){a.userData.gun.scale.set(w.id==='candy'?1.3:1,1,w.id==='bubble'?1.4:1);a.userData.gun.children[0].material=mat(WEAPONS[w.id].color);setGunWeapon(a.userData.gun,w.id);}
       if(!p.alive&&a.userData.deadAt===null){a.userData.deadAt=this.clock;const effect=new THREE.Group();a.add(effect);a.userData.deathVisual=effect;const balloon=sphere(.6,'#ef9cb8',effect,0,3.4,0);balloon.scale.y=1.25;cylinder(.012,.012,1.2,'#ffe9cc',effect,0,2.8,0,5);}
     }
     const ids=new Set(state.players.map(p=>p.id));for(const[id,a]of this.actors)if(!ids.has(id)){this.scene.remove(a);this.dispose(a);this.actors.delete(id);}
@@ -345,7 +407,7 @@ export class IslandScene {
       const aim=local&&Number.isFinite(this.localInput.aim)?this.localInput.aim:p.aim,pitch=local&&Number.isFinite(this.localInput.pitch)?this.localInput.pitch:p.pitch;
       const diff=Math.atan2(Math.sin(aim-a.rotation.y),Math.cos(aim-a.rotation.y));a.rotation.y+=diff*(1-Math.exp(-dt*(local?36:20)));a.rotation.x=p.sprinting?.08:0;
       a.userData.legs[0].rotation.x=p.climbing?Math.sin(t*9)*.6:!p.grounded?-.4:p.moving?Math.sin(t*(p.sprinting?18:12))*(p.sprinting?.75:.5):0;
-      a.userData.legs[1].rotation.x=!p.grounded?.5:p.moving?-a.userData.legs[0].rotation.x:0;a.userData.gun.rotation.x=-(pitch||0);a.userData.flash.visible=t<(a.userData.flashUntil||0);a.userData.gun.position.z=THREE.MathUtils.damp(a.userData.gun.position.z,a.userData.flash.visible?.45:.54,25,dt);
+      a.userData.legs[1].rotation.x=!p.grounded?.5:p.moving?-a.userData.legs[0].rotation.x:0;if(a.userData.vrm)a.userData.vrm.update(dt);a.userData.gun.rotation.x=-(pitch||0);a.userData.flash.visible=t<(a.userData.flashUntil||0);a.userData.gun.position.z=THREE.MathUtils.damp(a.userData.gun.position.z,a.userData.flash.visible?.45:.54,25,dt);
     }
     if(playing){
       this.camera=this.followCamera;let p=this.state?.players.find(p=>p.id===this.selfId);if(!p?.alive)p=this.state?.players.find(p=>p.alive)||p;
