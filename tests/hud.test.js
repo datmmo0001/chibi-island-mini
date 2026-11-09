@@ -43,7 +43,8 @@ test('photo 7 positions retain user sizes and opacity as landscape defaults',()=
   assert.equal(d.fire.x,.907);assert.equal(d.fire.y,.780);assert.equal(d.sprint.x,.815);assert.equal(d.skill.x,.733);
   assert.equal(d.fire.scale,1.45);assert.equal(d.fire.opacity,.65);
   assert.equal(d.skill.scale,1.1);assert.equal(d.skill.opacity,.8);
-  assert.equal(d.compass.y,0.09402619949494949);
+  assert.equal(d.compass.y,0.1803351476918096);
+  assert.equal(d.compass.x,0.4888399711944772);assert.equal(d.camera.x,0.05696017187346453);assert.equal(d.camera.y,0.5379981994628906);assert.equal(d.camera.opacity,.9);
 });
 
 import { readFileSync } from 'node:fs';

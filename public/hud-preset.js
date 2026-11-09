@@ -1,4 +1,5 @@
-// Exact landscape positions exported by the user from the UI editor.
+// Landscape positions exported by the user from the UI editor; compass
+// and camera updated from the user's 2026-11-10 export.
 export const USER_LANDSCAPE_HUD = Object.freeze({
   "timer": {
     "x": 0.51,
@@ -19,8 +20,8 @@ export const USER_LANDSCAPE_HUD = Object.freeze({
     "opacity": 1
   },
   "compass": {
-    "x": 0.6212284482758621,
-    "y": 0.09402619949494949,
+    "x": 0.4888399711944772,
+    "y": 0.1803351476918096,
     "scale": 1,
     "opacity": 1
   },
@@ -107,6 +108,12 @@ export const USER_LANDSCAPE_HUD = Object.freeze({
     "y": 0.5691682449494949,
     "scale": 1,
     "opacity": 1
+  },
+  "camera": {
+    "x": 0.05696017187346453,
+    "y": 0.5379981994628906,
+    "scale": 1,
+    "opacity": 0.9
   },
   "interaction": {
     "x": 0.5,

@@ -18,11 +18,13 @@ export function cleanLayouts(raw) {
 export function defaultWidgets(width, height, touch = true, safe = {}) {
   const defaults=baseWidgets(width,height,touch,safe);
   if(layoutMode(width,height)==='landscape' && width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)>=780) { for(const id of ['compass','joystick','fire','jump','sprint','pickup','skill','scope']) defaults[id]={...defaults[id],...USER_LANDSCAPE_HUD[id]};
-    // Camera-lock toggle hangs off the user's own scope position (right and
-    // slightly down from it, clear of the joystick) so it follows wherever
-    // their saved layout puts scope. Landscape only — the preset is
+    // Camera-lock toggle: use the preset's explicit camera position when
+    // one is exported; otherwise it hangs off the user's own scope position
+    // (right and slightly down from it, clear of the joystick) so it follows
+    // wherever their saved layout puts scope. Landscape only — the preset is
     // landscape-only, so this must not leak into portrait defaults.
-    if(USER_LANDSCAPE_HUD.scope){const s=USER_LANDSCAPE_HUD.scope;defaults.camera={...defaults.camera,x:s.x+68/(width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)),y:s.y+28/(height-Math.max(8,safe.top||0)-Math.max(8,safe.bottom||0))};} }
+    if(USER_LANDSCAPE_HUD.camera){defaults.camera={...defaults.camera,...USER_LANDSCAPE_HUD.camera};}
+    else if(USER_LANDSCAPE_HUD.scope){const s=USER_LANDSCAPE_HUD.scope;defaults.camera={...defaults.camera,x:s.x+68/(width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)),y:s.y+28/(height-Math.max(8,safe.top||0)-Math.max(8,safe.bottom||0))};} }
   if(width>height && width-Math.max(8,safe.left||0)-Math.max(8,safe.right||0)>=700){
     // Image 7: fire at lower right, sprint above-left, skill further left.
     const positions={fire:[.907,.780],sprint:[.815,.620],skill:[.733,.665],jump:[.805,.800],pickup:[.885,.523],swap:[.952,.563],reload:[.739,.876]};
